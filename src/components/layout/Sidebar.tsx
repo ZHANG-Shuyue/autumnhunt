@@ -1,9 +1,11 @@
-import { Building2, Globe, LayoutDashboard, MessageSquare, Send, Settings } from 'lucide-react'
+import { Building2, Calendar, Globe, LayoutDashboard, MessageSquare, Send, Settings } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
+import { useCalendarStore } from '../../store/useCalendarStore'
 import { cn } from '../../lib/utils'
 
 const navItems = [
   { to: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/calendar', label: '日历', icon: Calendar },
   { to: '/companies', label: '公司库', icon: Building2 },
   { to: '/applications', label: '投递追踪', icon: Send },
   { to: '/interviews', label: '面试记录', icon: MessageSquare },
@@ -11,6 +13,7 @@ const navItems = [
 ]
 
 export default function Sidebar() {
+  const todoCount = useCalendarStore((s) => s.getTodayEvents().length)
   return (
     <aside className="fixed left-0 top-0 flex h-screen w-60 flex-col border-r border-neutral-border bg-[linear-gradient(rgba(232,213,183,0.3),rgba(232,213,183,0.3)),#FAF7F2] p-4">
       <div className="mb-8 px-2 py-4">
@@ -27,7 +30,7 @@ export default function Sidebar() {
               end={item.to === '/'}
               className={({ isActive }) =>
                 cn(
-                  'relative flex items-center gap-3 rounded-2xl px-4 py-3 text-sm text-neutral-muted transition-colors hover:bg-primary-cream/25 hover:text-neutral-text',
+                  'relative flex items-center justify-between rounded-2xl px-4 py-3 text-sm text-neutral-muted transition-colors hover:bg-primary-cream/25 hover:text-neutral-text',
                   isActive && 'bg-primary-cream/35 text-neutral-text',
                 )
               }
@@ -35,8 +38,13 @@ export default function Sidebar() {
               {({ isActive }) => (
                 <>
                   {isActive && <span className="absolute left-0 top-2 h-8 w-1 rounded-r bg-primary-cream" />}
-                  <Icon className="h-4 w-4" />
-                  <span>{item.label}</span>
+                  <span className="inline-flex items-center gap-3">
+                    <Icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </span>
+                  {item.to === '/calendar' && todoCount > 0 && (
+                    <span className="rounded-full bg-primary-rose px-1.5 py-0.5 text-[11px] text-white">{todoCount > 9 ? '9+' : todoCount}</span>
+                  )}
                 </>
               )}
             </NavLink>
@@ -45,8 +53,8 @@ export default function Sidebar() {
       </nav>
 
       <div className="space-y-2 border-t border-neutral-border px-2 pt-4 text-sm text-neutral-muted">
-        <p>v0.1</p>
-        <a href="#" className="inline-flex items-center gap-2 hover:text-neutral-text">
+        <p>v0.2</p>
+        <a href="https://github.com/ZHANG-Shuyue/autumnhunt" className="inline-flex items-center gap-2 hover:text-neutral-text" target="_blank">
           <Globe className="h-4 w-4" /> GitHub
         </a>
       </div>

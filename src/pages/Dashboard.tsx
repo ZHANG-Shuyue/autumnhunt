@@ -1,53 +1,98 @@
-import { Building2, Calendar, Send, Trophy } from 'lucide-react'
+import { addDays, format, isAfter, isBefore, startOfDay } from 'date-fns'
+import { Building2, CalendarClock, CheckCircle2, ClipboardList, Send, Trophy } from 'lucide-react'
+import EmptyState from '../components/common/EmptyState'
 import StatCard from '../components/common/StatCard'
 import { Card } from '../components/ui/card'
-
-const stats = [
-  { title: '已投递公司数', value: 12, icon: Send, tone: 'bg-primary-mist/50' },
-  { title: '进行中面试数', value: 3, icon: Calendar, tone: 'bg-primary-rose/50' },
-  { title: '已收 Offer 数', value: 1, icon: Trophy, tone: 'bg-primary-sage/50' },
-  { title: '公司库总数', value: 156, icon: Building2, tone: 'bg-primary-cream/70' },
-]
-
-const newCompanies = ['字节跳动 · 前端开发工程师', '腾讯 · 后端开发工程师', '招商银行 · 金融科技岗', '米哈游 · 图形开发工程师']
-const schedules = ['05/16 10:30 网易 一面', '05/18 14:00 小红书 二面', '05/20 16:00 字节跳动 HR 面']
+import { useApplicationStore } from '../store/useApplicationStore'
+import { useCalendarStore } from '../store/useCalendarStore'
+import { useCompanyStore } from '../store/useCompanyStore'
+import { useInterviewStore } from '../store/useInterviewStore'
 
 export default function Dashboard() {
+  const companies = useCompanyStore((s) => s.companies)
+  const applications = useApplicationStore((s) => s.applications)
+  const interviews = useInterviewStore((s) => s.interviews)
+  const todayEvents = useCalendarStore((s) => s.getTodayEvents())
+
+  const today = new Date().toISOString().slice(0, 10)
+  const todayCompanies = companies.filter((item) => item.createdAt === today)
+  const upcomingInterviews = interviews
+    .filter((i) => {
+      const d = new Date(i.scheduledAt)
+      return isAfter(d, startOfDay(new Date())) && isBefore(d, addDays(new Date(), 7))
+    })
+    .slice(0, 5)
+
+  const interviewingCount = applications.filter((a) => a.status === 'interviewing').length + upcomingInterviews.length
+  const offerCount = applications.filter((a) => a.finalResult === 'offer').length
+
+  const stats = [
+    { title: '已投递公司数', value: applications.length, icon: Send, tone: 'bg-primary-mist/50' },
+    { title: '进行中面试数', value: interviewingCount, icon: CalendarClock, tone: 'bg-primary-rose/50' },
+    { title: '已收 Offer 数', value: offerCount, icon: Trophy, tone: 'bg-primary-sage/50' },
+    { title: '公司库总数', value: companies.length, icon: Building2, tone: 'bg-primary-cream/70' },
+  ]
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {stats.map((item) => (
-          <StatCard key={item.title} {...item} />
-        ))}
+        {stats.map((item) => <StatCard key={item.title} {...item} />)}
       </div>
 
       <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
         <Card>
-          <h3 className="mb-4 text-lg font-semibold">今日新增公司</h3>
-          <div className="space-y-3">
-            {newCompanies.map((item) => (
-              <div key={item} className="rounded-2xl border border-neutral-border bg-neutral-bg p-3 text-sm text-neutral-text">
-                {item}
-              </div>
-            ))}
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold">今日待办</h3>
+            <span className="rounded-full bg-primary-rose px-2 py-0.5 text-xs text-white">{todayEvents.length}</span>
           </div>
+          {todayEvents.length ? (
+            <div className="space-y-2">
+              {todayEvents.map((event) => (
+                <div key={event.id} className="flex items-center justify-between rounded-xl border border-neutral-border bg-neutral-bg p-3 text-sm">
+                  <span className="inline-flex items-center gap-2"><ClipboardList className="h-4 w-4 text-neutral-muted" />{event.title}</span>
+                  <span className="text-neutral-muted">{event.time ?? '全天'} · {event.type}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState text="今天没有安排，可以好好准备简历哦 ☕" icon={CheckCircle2} />
+          )}
         </Card>
 
         <Card>
-          <h3 className="mb-4 text-lg font-semibold">近期面试日程</h3>
-          <div className="space-y-4">
-            {schedules.map((item, index) => (
-              <div key={item} className="flex gap-3">
+          <h3 className="mb-4 text-lg font-semibold">今日新增公司</h3>
+          {todayCompanies.length ? (
+            <div className="space-y-2">
+              {todayCompanies.map((item) => (
+                <div key={item.id} className="rounded-xl border border-neutral-border bg-neutral-bg p-3 text-sm">
+                  {item.name} · {item.industry}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState text="今天还没有新增公司，去公司库看看吧 🌱" />
+          )}
+        </Card>
+      </div>
+
+      <Card>
+        <h3 className="mb-4 text-lg font-semibold">近期面试日程</h3>
+        {upcomingInterviews.length ? (
+          <div className="space-y-3">
+            {upcomingInterviews.map((item, index) => (
+              <div key={item.id} className="flex gap-3">
                 <div className="flex flex-col items-center">
                   <span className="h-2.5 w-2.5 rounded-full bg-primary-rose" />
-                  {index !== schedules.length - 1 && <span className="mt-1 h-8 w-px bg-neutral-border" />}
+                  {index !== upcomingInterviews.length - 1 && <span className="mt-1 h-8 w-px bg-neutral-border" />}
                 </div>
-                <p className="text-sm text-neutral-text">{item}</p>
+                <p className="text-sm text-neutral-text">{format(new Date(item.scheduledAt), 'MM/dd HH:mm')} · {item.round}</p>
               </div>
             ))}
           </div>
-        </Card>
-      </div>
+        ) : (
+          <EmptyState text="未来 7 天暂无面试安排" />
+        )}
+      </Card>
     </div>
   )
 }

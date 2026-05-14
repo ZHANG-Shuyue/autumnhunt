@@ -2,6 +2,7 @@ import { useLocation } from 'react-router-dom'
 
 const titleMap: Record<string, string> = {
   '/': '概览看板',
+  '/calendar': '日历',
   '/companies': '公司库',
   '/applications': '投递追踪',
   '/interviews': '面试记录',
