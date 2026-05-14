@@ -6,9 +6,10 @@ import EventCard from './EventCard'
 interface TimelineViewProps {
   events: CalendarEvent[]
   days?: number
+  onSelectEvent?: (event: CalendarEvent) => void
 }
 
-export default function TimelineView({ events, days = 30 }: TimelineViewProps) {
+export default function TimelineView({ events, days = 30, onSelectEvent }: TimelineViewProps) {
   const sections = eachDayOfInterval({ start: new Date(), end: addDays(new Date(), days) })
 
   return (
@@ -25,7 +26,9 @@ export default function TimelineView({ events, days = 30 }: TimelineViewProps) {
             <h3 className="mb-3 text-sm font-semibold text-neutral-text">{format(day, 'yyyy-MM-dd EEEE')}</h3>
             <div className="space-y-2">
               {list.map((event) => (
-                <EventCard key={event.id} event={event} />
+                <button key={event.id} type="button" className="block w-full text-left" onClick={() => onSelectEvent?.(event)}>
+                  <EventCard event={event} />
+                </button>
               ))}
             </div>
           </section>

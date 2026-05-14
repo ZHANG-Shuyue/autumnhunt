@@ -34,10 +34,6 @@ export default function CompanyDetail() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <Button variant="outline" onClick={() => navigate(-1)}><ArrowLeft className="mr-2 h-4 w-4" />返回</Button>
-        <div className="space-x-2"><Button variant="outline" onClick={() => navigate('/companies')}>编辑</Button></div>
-      </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
         <div className="space-y-4 xl:col-span-3">
           <Card>
@@ -75,6 +71,7 @@ export default function CompanyDetail() {
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>新建投递</DialogTitle></DialogHeader>
           <ApplicationForm
+            fixedCompanyId={id}
             companies={[company]}
             onCancel={() => setOpen(false)}
             onSubmit={(values: ApplicationFormValues) => {

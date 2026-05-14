@@ -1,19 +1,24 @@
-import { Copy, Ellipsis, Plus, Search } from 'lucide-react'
+import { Ellipsis, Plus, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import EmptyState from '../components/common/EmptyState'
+import ApplicationForm from '../components/forms/ApplicationForm'
 import CompanyForm from '../components/forms/CompanyForm'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
 import { Input } from '../components/ui/input'
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover'
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
-import type { Company } from '../types'
+import { applicationSchema, type ApplicationFormValues } from '../schemas/application.schema'
+import { companySchema, type CompanyFormValues } from '../schemas/company.schema'
+import { useApplicationStore } from '../store/useApplicationStore'
 import { useCalendarStore } from '../store/useCalendarStore'
 import { useCompanyStore } from '../store/useCompanyStore'
-import { companySchema, type CompanyFormValues } from '../schemas/company.schema'
+import type { Company } from '../types'
+import { pushActivity } from '../utils/activity'
 
 const statusOptions = [
   { label: '全部', value: 'all' },
@@ -32,15 +37,19 @@ const statusMap: Record<Company['status'], { label: string; variant: 'sage' | 'a
 
 export default function Companies() {
   const { companies, addCompany, updateCompany, deleteCompany } = useCompanyStore()
+  const addApplication = useApplicationStore((s) => s.addApplication)
   const syncFromOtherStores = useCalendarStore((s) => s.syncFromOtherStores)
 
   const [keyword, setKeyword] = useState('')
   const [industry, setIndustry] = useState('all')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [sortBy, setSortBy] = useState<'deadline' | 'createdAt' | 'name'>('deadline')
-  const [dialogOpen, setDialogOpen] = useState(false)
+  const [companyDialogOpen, setCompanyDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Company | undefined>()
   const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const [applicationDialogOpen, setApplicationDialogOpen] = useState(false)
+  const [targetCompanyId, setTargetCompanyId] = useState<string | null>(null)
 
   const list = useMemo(() => {
     const filtered = companies
@@ -55,18 +64,32 @@ export default function Companies() {
     })
   }, [companies, keyword, industry, status, sortBy])
 
-  const onSubmit = (values: CompanyFormValues) => {
+  const onSubmitCompany = (values: CompanyFormValues) => {
     const parsed = companySchema.parse(values)
     if (editing) {
       updateCompany(editing.id, { ...parsed, deadline: parsed.deadline || undefined })
+      pushActivity(`更新公司：${parsed.name}`)
       toast.success('已更新')
     } else {
       addCompany({ ...parsed, deadline: parsed.deadline || undefined, attachments: [] })
+      pushActivity(`新增公司：${parsed.name}`)
       toast.success('已添加')
     }
     syncFromOtherStores()
-    setDialogOpen(false)
+    setCompanyDialogOpen(false)
     setEditing(undefined)
+  }
+
+  const onSubmitApplication = (values: ApplicationFormValues) => {
+    if (!targetCompanyId) return
+    const parsed = applicationSchema.parse({ ...values, companyId: targetCompanyId })
+    addApplication({ ...parsed, companyId: targetCompanyId, writtenTestAt: parsed.writtenTestAt || undefined, preparationDocUrl: parsed.preparationDocUrl || undefined })
+    const cname = companies.find((c) => c.id === targetCompanyId)?.name ?? '未知公司'
+    pushActivity(`新增投递：${cname} · ${parsed.position}`)
+    syncFromOtherStores()
+    toast.success('已添加投递')
+    setApplicationDialogOpen(false)
+    setTargetCompanyId(null)
   }
 
   return (
@@ -93,7 +116,7 @@ export default function Companies() {
             <option value="name">按公司名</option>
           </select>
         </div>
-        <Button onClick={() => { setEditing(undefined); setDialogOpen(true) }}><Plus className="mr-2 h-4 w-4" />添加公司</Button>
+        <Button onClick={() => { setEditing(undefined); setCompanyDialogOpen(true) }}><Plus className="mr-2 h-4 w-4" />添加公司</Button>
       </div>
 
       {list.length === 0 ? (
@@ -106,10 +129,16 @@ export default function Companies() {
               <Card key={company.id} className="space-y-4">
                 <div className="flex items-start justify-between">
                   <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary-cream/70 to-primary-mist/60" />
-                  <div className="flex gap-1">
-                    <Button size="icon" variant="ghost" onClick={() => navigator.clipboard.writeText(company.name).then(() => toast.success('已复制公司名'))}><Copy className="h-4 w-4" /></Button>
-                    <Button size="icon" variant="ghost" onClick={() => { setEditing(company); setDialogOpen(true) }}><Ellipsis className="h-4 w-4" /></Button>
-                  </div>
+                  {/* v0.2.1: 编辑/删除收纳到 ... 菜单 */}
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" className="rounded-lg p-1 hover:bg-primary-cream/25"><Ellipsis className="h-4 w-4" /></button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-28 rounded-xl p-1">
+                      <button type="button" className="block w-full rounded-md px-2 py-1 text-left text-sm hover:bg-primary-cream/20" onClick={() => { setEditing(company); setCompanyDialogOpen(true) }}>编辑</button>
+                      <button type="button" className="block w-full rounded-md px-2 py-1 text-left text-sm hover:bg-primary-ash/20" onClick={() => setDeletingId(company.id)}>删除</button>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold">{company.name}</h3>
@@ -119,20 +148,30 @@ export default function Companies() {
                   </div>
                 </div>
                 <p className="text-sm text-neutral-muted">截止日期：{company.deadline ?? '待更新'}</p>
-                <div className="flex gap-2">
-                  <Button variant="outline" className="flex-1" onClick={() => { setEditing(company); setDialogOpen(true) }}>编辑</Button>
-                  <Button variant="destructive" className="flex-1" onClick={() => setDeletingId(company.id)}>删除</Button>
-                </div>
+                {/* v0.2.1: 主操作按钮改为 + 投递 */}
+                <Button className="w-full" onClick={() => { setTargetCompanyId(company.id); setApplicationDialogOpen(true) }}>+ 投递</Button>
               </Card>
             )
           })}
         </div>
       )}
 
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog open={companyDialogOpen} onOpenChange={setCompanyDialogOpen}>
         <DialogContent className="max-w-3xl">
           <DialogHeader><DialogTitle>{editing ? '编辑公司' : '添加公司'}</DialogTitle></DialogHeader>
-          <CompanyForm initial={editing} onSubmit={onSubmit} onCancel={() => setDialogOpen(false)} />
+          <CompanyForm initial={editing} onSubmit={onSubmitCompany} onCancel={() => setCompanyDialogOpen(false)} />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={applicationDialogOpen} onOpenChange={setApplicationDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader><DialogTitle>新建投递</DialogTitle></DialogHeader>
+          <ApplicationForm
+            fixedCompanyId={targetCompanyId ?? undefined}
+            companies={companies}
+            onSubmit={onSubmitApplication}
+            onCancel={() => setApplicationDialogOpen(false)}
+          />
         </DialogContent>
       </Dialog>
 
@@ -143,7 +182,9 @@ export default function Companies() {
         description="删除后不可恢复，相关投递记录不会自动删除。"
         onConfirm={() => {
           if (!deletingId) return
+          const name = companies.find((c) => c.id === deletingId)?.name ?? '公司'
           deleteCompany(deletingId)
+          pushActivity(`删除公司：${name}`)
           syncFromOtherStores()
           toast.success('已删除')
           setDeletingId(null)

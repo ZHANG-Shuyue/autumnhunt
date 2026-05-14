@@ -1,4 +1,5 @@
-import { useLocation } from 'react-router-dom'
+import { ArrowLeft } from 'lucide-react'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 const titleMap: Record<string, string> = {
   '/': '概览看板',
@@ -18,13 +19,24 @@ function getTitle(pathname: string) {
 
 export default function Header() {
   const location = useLocation()
+  const navigate = useNavigate()
   const title = getTitle(location.pathname)
+  const isDetail = location.pathname.startsWith('/companies/') || location.pathname.startsWith('/applications/')
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-neutral-border bg-neutral-bg/85 px-8 backdrop-blur">
-      <div>
-        <h2 className="text-lg font-semibold text-neutral-text">{title}</h2>
-        <p className="text-xs text-neutral-muted">AutumnHunt / {title}</p>
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          {/* v0.2.1: 二级页面在顶栏保留返回按钮 */}
+          {isDetail && (
+            <button type="button" onClick={() => navigate(-1)} className="rounded-lg p-1 hover:bg-primary-cream/25" aria-label="返回">
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+          )}
+          <h2 className="text-3xl font-semibold text-neutral-text">{title}</h2>
+        </div>
+        {/* v0.2.1: 一级页面移除面包屑，仅二级页面显示 */}
+        {isDetail && <p className="text-xs text-neutral-muted">AutumnHunt / {title}</p>}
       </div>
       <div className="h-9 w-9 rounded-full bg-primary-mist/60" />
     </header>

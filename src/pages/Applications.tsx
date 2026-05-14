@@ -1,30 +1,33 @@
 import {
   DndContext,
-  type DragEndEvent,
   PointerSensor,
   useDroppable,
   useSensor,
   useSensors,
+  type DragEndEvent,
 } from '@dnd-kit/core'
+import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Calendar, Kanban, List } from 'lucide-react'
+import { Calendar, Ellipsis, Kanban, List } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
+import EventCard from '../components/calendar/EventCard'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import EmptyState from '../components/common/EmptyState'
 import ApplicationForm from '../components/forms/ApplicationForm'
-import EventCard from '../components/calendar/EventCard'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
-import type { Application } from '../types'
+import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover'
+import { applicationSchema, type ApplicationFormValues } from '../schemas/application.schema'
 import { useApplicationStore } from '../store/useApplicationStore'
 import { useCalendarStore } from '../store/useCalendarStore'
 import { useCompanyStore } from '../store/useCompanyStore'
-import { applicationSchema, type ApplicationFormValues } from '../schemas/application.schema'
-import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
+import { useInterviewStore } from '../store/useInterviewStore'
+import type { Application } from '../types'
+import { pushActivity } from '../utils/activity'
 
 const columns: { key: Application['status']; label: string; tone: 'mist' | 'cream' | 'rose' | 'sage' | 'ash' }[] = [
   { key: 'applied', label: '已投递', tone: 'mist' },
@@ -34,25 +37,12 @@ const columns: { key: Application['status']; label: string; tone: 'mist' | 'crea
   { key: 'rejected', label: '已挂', tone: 'ash' },
 ]
 
-function SortableCard({ app, company, onEdit, onDelete }: { app: Application; company?: string; onEdit: () => void; onDelete: () => void }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: app.id })
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  }
-  return (
-    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
-      <Card className={`p-3 ${isDragging ? 'rotate-2 shadow-[0_12px_30px_rgba(92,80,72,0.2)]' : ''}`}>
-        <p className="font-medium">{company ?? '未知公司'}</p>
-        <p className="mt-1 text-sm text-neutral-muted">{app.position}</p>
-        <p className="mt-2 text-xs text-neutral-muted">投递于 {app.appliedAt}</p>
-        <div className="mt-3 flex gap-2">
-          <Button size="sm" variant="outline" onClick={onEdit}>编辑</Button>
-          <Button size="sm" variant="destructive" onClick={onDelete}>删除</Button>
-        </div>
-      </Card>
-    </div>
-  )
+const statusLabel: Record<Application['status'], string> = {
+  applied: '已投递',
+  written_test: '笔试中',
+  interviewing: '面试中',
+  offer: 'Offer',
+  rejected: '已挂',
 }
 
 function DroppableColumn({ id, children }: { id: string; children: React.ReactNode }) {
@@ -60,10 +50,55 @@ function DroppableColumn({ id, children }: { id: string; children: React.ReactNo
   return <div ref={setNodeRef}>{children}</div>
 }
 
+function SortableCard({
+  app,
+  company,
+  nextTodo,
+  onEdit,
+  onDelete,
+}: {
+  app: Application
+  company?: string
+  nextTodo?: string
+  onEdit: () => void
+  onDelete: () => void
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: app.id })
+  const style = { transform: CSS.Transform.toString(transform), transition }
+
+  return (
+    <div ref={setNodeRef} style={style} {...attributes} {...listeners}>
+      {/* v0.2.1: 拖拽状态增加 2° 旋转与阴影增强 */}
+      <Card className={`group p-3 ${isDragging ? 'rotate-2 shadow-[0_12px_30px_rgba(92,80,72,0.2)]' : ''}`}>
+        <div className="flex items-start justify-between gap-2">
+          <p className="font-semibold text-neutral-text">{company ?? '未知公司'}</p>
+          {/* v0.2.1: hover 菜单替代卡片常驻按钮 */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <button type="button" className="opacity-0 transition group-hover:opacity-100">
+                <Ellipsis className="h-4 w-4 text-neutral-muted" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-28 rounded-xl p-1">
+              <button type="button" className="block w-full rounded-md px-2 py-1 text-left text-sm hover:bg-primary-cream/20" onClick={onEdit}>编辑</button>
+              <button type="button" className="block w-full rounded-md px-2 py-1 text-left text-sm hover:bg-primary-ash/20" onClick={onDelete}>删除</button>
+            </PopoverContent>
+          </Popover>
+        </div>
+        <p className="mt-1 text-sm text-neutral-muted">{app.position}</p>
+        <p className="mt-2 text-xs text-neutral-muted">投递于 {app.appliedAt}</p>
+        {app.resumeFile && <p className="mt-1 text-xs text-neutral-muted">简历：{app.resumeFile}</p>}
+        {nextTodo && <p className="mt-1 text-xs text-neutral-muted">下一步：{nextTodo}</p>}
+      </Card>
+    </div>
+  )
+}
+
 export default function Applications() {
   const navigate = useNavigate()
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const companies = useCompanyStore((s) => s.companies)
+  const interviews = useInterviewStore((s) => s.interviews)
   const { applications, addApplication, updateApplication, deleteApplication } = useApplicationStore()
   const { syncFromOtherStores, events } = useCalendarStore()
 
@@ -83,14 +118,28 @@ export default function Applications() {
     }
     if (editing) {
       updateApplication(editing.id, payload)
+      pushActivity(`更新投递：${payload.position}`)
       toast.success('已更新')
     } else {
       addApplication(payload)
+      pushActivity(`新增投递：${payload.position}`)
       toast.success('已添加')
     }
     syncFromOtherStores()
     setDialogOpen(false)
     setEditing(undefined)
+  }
+
+  const nextTodoOf = (app: Application) => {
+    const now = new Date().toISOString().slice(0, 16)
+    const candidates: { time: string; text: string }[] = []
+    if (app.writtenTestAt && `${app.writtenTestAt}T00:00` > now) candidates.push({ time: `${app.writtenTestAt}T00:00`, text: `${app.writtenTestAt.slice(5)} 笔试` })
+    const nextInterview = interviews
+      .filter((i) => i.applicationId === app.id && i.scheduledAt > new Date().toISOString())
+      .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt))[0]
+    if (nextInterview) candidates.push({ time: nextInterview.scheduledAt, text: `${nextInterview.scheduledAt.slice(5, 10)} ${nextInterview.round}` })
+    candidates.sort((a, b) => a.time.localeCompare(b.time))
+    return candidates[0]?.text
   }
 
   const onDragEnd = (event: DragEndEvent) => {
@@ -102,8 +151,9 @@ export default function Applications() {
     const app = applications.find((item) => item.id === active.id)
     if (!app || app.status === to) return
     updateApplication(app.id, { status: to })
+    pushActivity(`投递状态变更：${app.position} → ${statusLabel[to]}`)
     syncFromOtherStores()
-    toast.success('状态已更新')
+    toast.success(`已更新为 ${statusLabel[to]}`)
   }
 
   return (
@@ -136,6 +186,7 @@ export default function Applications() {
                             key={app.id}
                             app={app}
                             company={companies.find((c) => c.id === app.companyId)?.name}
+                            nextTodo={nextTodoOf(app)}
                             onEdit={() => { setEditing(app); setDialogOpen(true) }}
                             onDelete={() => setDeletingId(app.id)}
                           />
@@ -144,8 +195,8 @@ export default function Applications() {
                     </SortableContext>
                   </Card>
                 </DroppableColumn>
-              )
-            })}
+              )}
+            )}
           </div>
         </DndContext>
       )}
@@ -160,8 +211,7 @@ export default function Applications() {
             </thead>
             <tbody>
               {applications.map((app) => {
-                const interviews = useCalendarStore.getState().events.filter((e) => e.linkedTo?.kind === 'interview')
-                const recent = interviews.find((e) => e.linkedTo?.id === app.id)
+                const recent = interviews.filter((i) => i.applicationId === app.id).sort((a, b) => b.scheduledAt.localeCompare(a.scheduledAt))[0]
                 return (
                   <tr key={app.id} className="cursor-pointer border-b border-neutral-border last:border-0 hover:bg-primary-cream/10" onClick={() => navigate(`/applications/${app.id}`)}>
                     <td className="py-3">{companies.find((c) => c.id === app.companyId)?.name ?? '-'}</td>
@@ -169,7 +219,7 @@ export default function Applications() {
                     <td>{columns.find((c) => c.key === app.status)?.label}</td>
                     <td>{app.appliedAt}</td>
                     <td>{app.writtenTestAt ?? '-'}</td>
-                    <td>{recent?.date ?? '-'}</td>
+                    <td>{recent?.scheduledAt?.slice(0, 10) ?? '-'}</td>
                     <td><Button size="sm" variant="ghost" onClick={(e) => { e.stopPropagation(); setEditing(app); setDialogOpen(true) }}>编辑</Button></td>
                   </tr>
                 )
@@ -196,7 +246,9 @@ export default function Applications() {
         description="确认删除该投递记录吗？"
         onConfirm={() => {
           if (!deletingId) return
+          const title = applications.find((a) => a.id === deletingId)?.position ?? '投递'
           deleteApplication(deletingId)
+          pushActivity(`删除投递：${title}`)
           syncFromOtherStores()
           toast.success('已删除')
           setDeletingId(null)

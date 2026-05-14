@@ -23,3 +23,15 @@ a {
   color: inherit;
   text-decoration: none;
 }
+
+/* v0.2.1: 统一全局表单焦点样式，覆盖浏览器默认蓝色 outline */
+input:focus,
+input:focus-visible,
+select:focus,
+select:focus-visible,
+textarea:focus,
+textarea:focus-visible {
+  outline: none;
+  border-color: #e8d5b7;
+  box-shadow: 0 0 0 2px rgba(232, 213, 183, 0.4), 0 0 0 4px #faf7f2;
+}

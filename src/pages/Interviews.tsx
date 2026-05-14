@@ -15,6 +15,7 @@ import { useCompanyStore } from '../store/useCompanyStore'
 import { useInterviewStore } from '../store/useInterviewStore'
 import { interviewSchema, type InterviewFormValues } from '../schemas/interview.schema'
 import type { Interview } from '../types'
+import { pushActivity } from '../utils/activity'
 
 export default function Interviews() {
   const applications = useApplicationStore((s) => s.applications)
@@ -47,9 +48,11 @@ export default function Interviews() {
     }
     if (editing) {
       updateInterview(editing.id, payload)
+      pushActivity(`更新面试：${payload.round}`)
       toast.success('已更新')
     } else {
       addInterview(payload)
+      pushActivity(`新增面试：${payload.round}`)
       toast.success('已添加')
     }
     syncFromOtherStores()
@@ -157,7 +160,9 @@ export default function Interviews() {
         description="确认删除该面试记录吗？"
         onConfirm={() => {
           if (!deletingId) return
+          const round = interviews.find((i) => i.id === deletingId)?.round ?? '面试'
           deleteInterview(deletingId)
+          pushActivity(`删除面试：${round}`)
           syncFromOtherStores()
           toast.success('已删除')
           setDeletingId(null)

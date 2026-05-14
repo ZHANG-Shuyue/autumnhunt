@@ -2,6 +2,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useFieldArray, useForm } from 'react-hook-form'
 import { companySchema, type CompanyFormValues } from '../../schemas/company.schema'
 import type { Company } from '../../types'
+import DatePicker from '../common/DatePicker'
 import TagInput from '../common/TagInput'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -53,7 +54,7 @@ export default function CompanyForm({ initial, onSubmit, onCancel }: Props) {
         </div>
         <div>
           <label className="mb-1 block text-sm">招聘状态 <span className="text-primary-rose">*</span></label>
-          <select {...form.register('status')} className="h-10 w-full rounded-xl border border-neutral-border px-3 text-sm">
+          <select {...form.register('status')} className="h-10 w-full rounded-xl border border-neutral-border bg-white px-3 text-sm">
             <option value="open">开放中</option>
             <option value="upcoming">即将开放</option>
             <option value="closed">已截止</option>
@@ -69,7 +70,11 @@ export default function CompanyForm({ initial, onSubmit, onCancel }: Props) {
         <TagInput value={form.watch('positions') ?? []} onChange={(v) => form.setValue('positions', v)} />
       </div>
       <div className="grid grid-cols-2 gap-3">
-        <div><label className="mb-1 block text-sm">截止日期</label><Input type="date" {...form.register('deadline')} /></div>
+        <div>
+          <label className="mb-1 block text-sm">截止日期</label>
+          {/* v0.2.1: 统一使用 DatePicker */}
+          <DatePicker value={form.watch('deadline') || undefined} onChange={(value) => form.setValue('deadline', value ?? '')} />
+        </div>
         <div><label className="mb-1 block text-sm">Base 地点</label><Input {...form.register('baseLocation')} /></div>
       </div>
       <div className="grid grid-cols-2 gap-3">
