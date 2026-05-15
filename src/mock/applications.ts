@@ -9,6 +9,7 @@ export const mockApplications: Application[] = [
     appliedAt: '2026-05-01',
     finalResult: 'pending',
     writtenTestResult: 'pending',
+    updatedAt: '2026-05-01T00:00:00.000Z',
   },
   {
     id: 'a2',
@@ -19,6 +20,7 @@ export const mockApplications: Application[] = [
     writtenTestAt: '2026-05-16',
     writtenTestResult: 'pending',
     finalResult: 'pending',
+    updatedAt: '2026-05-02T00:00:00.000Z',
   },
   {
     id: 'a3',
@@ -27,6 +29,7 @@ export const mockApplications: Application[] = [
     status: 'interviewing',
     appliedAt: '2026-05-05',
     finalResult: 'pending',
+    updatedAt: '2026-05-05T00:00:00.000Z',
   },
   {
     id: 'a4',
@@ -35,6 +38,7 @@ export const mockApplications: Application[] = [
     status: 'offer',
     appliedAt: '2026-05-02',
     finalResult: 'offer',
+    updatedAt: '2026-05-02T00:00:00.000Z',
   },
   {
     id: 'a5',
@@ -43,5 +47,6 @@ export const mockApplications: Application[] = [
     status: 'rejected',
     appliedAt: '2026-04-28',
     finalResult: 'rejected',
+    updatedAt: '2026-04-28T00:00:00.000Z',
   },
 ]

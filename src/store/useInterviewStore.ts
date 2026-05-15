@@ -2,31 +2,50 @@ import { addDays, isAfter, parseISO } from 'date-fns'
 import { nanoid } from 'nanoid'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { STORE_KEYS } from '../config/github'
 import { mockInterviews } from '../mock/interviews'
+import { queuePush } from '../services/syncBridge'
 import type { Interview } from '../types'
+import { ensureUpdatedAtList, nowIso } from '../utils/record'
+import { useSyncStore } from './useSyncStore'
 
 interface InterviewState {
   interviews: Interview[]
-  addInterview: (payload: Omit<Interview, 'id'>) => string
+  addInterview: (payload: Omit<Interview, 'id' | 'updatedAt'>) => string
   updateInterview: (id: string, payload: Partial<Interview>) => void
   deleteInterview: (id: string) => void
+  replaceInterviews: (interviews: Interview[]) => void
   getById: (id: string) => Interview | undefined
   getByApplicationId: (applicationId: string) => Interview[]
   getUpcoming: (days: number) => Interview[]
 }
 
+function markDirty() {
+  useSyncStore.getState().markPendingChange()
+  queuePush('interviews')
+}
+
 export const useInterviewStore = create<InterviewState>()(
   persist(
     (set, get) => ({
-      interviews: mockInterviews,
+      interviews: ensureUpdatedAtList(mockInterviews),
       addInterview: (payload) => {
         const id = nanoid()
-        set((state) => ({ interviews: [{ id, ...payload }, ...state.interviews] }))
+        set((state) => ({ interviews: [{ id, updatedAt: nowIso(), ...payload }, ...state.interviews] }))
+        markDirty()
         return id
       },
-      updateInterview: (id, payload) =>
-        set((state) => ({ interviews: state.interviews.map((item) => (item.id === id ? { ...item, ...payload } : item)) })),
-      deleteInterview: (id) => set((state) => ({ interviews: state.interviews.filter((item) => item.id !== id) })),
+      updateInterview: (id, payload) => {
+        set((state) => ({
+          interviews: state.interviews.map((item) => (item.id === id ? { ...item, ...payload, updatedAt: nowIso() } : item)),
+        }))
+        markDirty()
+      },
+      deleteInterview: (id) => {
+        set((state) => ({ interviews: state.interviews.filter((item) => item.id !== id) }))
+        markDirty()
+      },
+      replaceInterviews: (interviews) => set({ interviews: ensureUpdatedAtList(interviews) }),
       getById: (id) => get().interviews.find((item) => item.id === id),
       getByApplicationId: (applicationId) => get().interviews.filter((item) => item.applicationId === applicationId),
       getUpcoming: (days) => {
@@ -39,9 +58,15 @@ export const useInterviewStore = create<InterviewState>()(
       },
     }),
     {
-      name: 'autumnhunt-interviews',
-      version: 1,
+      name: STORE_KEYS.interviews,
+      version: 2,
       partialize: (state) => ({ interviews: state.interviews }),
+      migrate: (persisted) => {
+        const state = persisted as { interviews?: Interview[] }
+        return {
+          interviews: ensureUpdatedAtList(state.interviews ?? mockInterviews),
+        }
+      },
     },
   ),
 )

@@ -12,6 +12,7 @@ export const mockCompanies: Company[] = [
     description: '全球化技术公司，业务覆盖内容与企业服务。',
     source: '官方校招网站',
     createdAt: '2026-05-14',
+    updatedAt: '2026-05-14T00:00:00.000Z',
     baseLocation: '北京',
   },
   {
@@ -24,6 +25,7 @@ export const mockCompanies: Company[] = [
     deadline: '2026-10-25',
     source: '官方校招网站',
     createdAt: '2026-05-14',
+    updatedAt: '2026-05-14T00:00:00.000Z',
   },
   {
     id: '3',
@@ -35,6 +37,7 @@ export const mockCompanies: Company[] = [
     deadline: '2026-10-30',
     source: '官方校招网站',
     createdAt: '2026-05-14',
+    updatedAt: '2026-05-14T00:00:00.000Z',
   },
   {
     id: '4',
@@ -46,6 +49,7 @@ export const mockCompanies: Company[] = [
     deadline: '2026-11-01',
     source: '牛客校招',
     createdAt: '2026-05-13',
+    updatedAt: '2026-05-13T00:00:00.000Z',
   },
   {
     id: '5',
@@ -57,6 +61,7 @@ export const mockCompanies: Company[] = [
     deadline: '2026-10-18',
     source: '官方校招网站',
     createdAt: '2026-05-12',
+    updatedAt: '2026-05-12T00:00:00.000Z',
   },
   {
     id: '6',
@@ -68,6 +73,7 @@ export const mockCompanies: Company[] = [
     deadline: '2026-09-30',
     source: '公众号汇总',
     createdAt: '2026-05-12',
+    updatedAt: '2026-05-12T00:00:00.000Z',
   },
   {
     id: '7',
@@ -79,6 +85,7 @@ export const mockCompanies: Company[] = [
     deadline: '2026-10-28',
     source: '官方校招网站',
     createdAt: '2026-05-11',
+    updatedAt: '2026-05-11T00:00:00.000Z',
   },
   {
     id: '8',
@@ -90,6 +97,7 @@ export const mockCompanies: Company[] = [
     deadline: '2026-11-10',
     source: '官方校招网站',
     createdAt: '2026-05-10',
+    updatedAt: '2026-05-10T00:00:00.000Z',
   },
   {
     id: '9',
@@ -101,5 +109,6 @@ export const mockCompanies: Company[] = [
     deadline: '2026-10-31',
     source: '官方校招网站',
     createdAt: '2026-05-08',
+    updatedAt: '2026-05-08T00:00:00.000Z',
   },
 ]

@@ -1,4 +1,4 @@
-import { Building2, Calendar, Globe, LayoutDashboard, MessageSquare, Send, Settings } from 'lucide-react'
+import { Building2, Calendar, Globe, LayoutDashboard, MessageSquare, Send, Settings, Sparkles } from 'lucide-react'
 import { NavLink } from 'react-router-dom'
 import { useCalendarStore } from '../../store/useCalendarStore'
 import { cn } from '../../lib/utils'
@@ -21,8 +21,9 @@ export default function Sidebar() {
   return (
     <aside className="fixed left-0 top-0 flex h-screen w-60 flex-col border-r border-neutral-border bg-[linear-gradient(rgba(232,213,183,0.3),rgba(232,213,183,0.3)),#FAF7F2] p-4">
       <div className="mb-8 px-2 py-4">
-        {/* v0.2.1: Logo emoji 放大约 30% */}
-        <h1 className="font-serif text-3xl tracking-tight text-neutral-text">AutumnHunt <span className="text-[1.3em] leading-none">🌾</span></h1>
+        <h1 className="font-serif text-3xl tracking-tight text-neutral-text">
+          AutumnHunt <span className="text-[1.3em] leading-none">🌾</span>
+        </h1>
       </div>
 
       <nav className="flex-1 space-y-1">
@@ -58,8 +59,11 @@ export default function Sidebar() {
       </nav>
 
       <div className="space-y-2 border-t border-neutral-border px-2 pt-4 text-sm text-neutral-muted">
-        <p>v0.2.1</p>
-        <a href="https://github.com/ZHANG-Shuyue/autumnhunt" className="inline-flex items-center gap-2 hover:text-neutral-text" target="_blank">
+        <p>v0.3.0</p>
+        <a href="https://你的用户名.github.io/autumnhunt" className="inline-flex items-center gap-2 hover:text-neutral-text" target="_blank" rel="noreferrer">
+          <Sparkles className="h-4 w-4" /> ✨ 在线体验
+        </a>
+        <a href="https://github.com/ZHANG-Shuyue/autumnhunt" className="inline-flex items-center gap-2 hover:text-neutral-text" target="_blank" rel="noreferrer">
           <Globe className="h-4 w-4" /> GitHub
         </a>
       </div>

@@ -10,6 +10,7 @@ export const mockInterviews: Interview[] = [
     rating: 4,
     format: 'video',
     duration: 60,
+    updatedAt: '2026-05-18T14:00:00.000Z',
   },
   {
     id: 'i2',
@@ -19,6 +20,7 @@ export const mockInterviews: Interview[] = [
     selfReview: '算法题发挥稳定。',
     rating: 3,
     format: 'video',
+    updatedAt: '2026-05-16T10:30:00.000Z',
   },
   {
     id: 'i3',
@@ -28,5 +30,6 @@ export const mockInterviews: Interview[] = [
     selfReview: '整体反馈积极。',
     rating: 5,
     format: 'onsite',
+    updatedAt: '2026-05-10T09:30:00.000Z',
   },
 ]
