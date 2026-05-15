@@ -8,7 +8,8 @@ import CompanyForm from '../components/forms/CompanyForm'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
+import FormDialogLayout from '../components/common/FormDialogLayout'
+import { Dialog } from '../components/ui/dialog'
 import { Input } from '../components/ui/input'
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover'
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
@@ -157,22 +158,26 @@ export default function Companies() {
       )}
 
       <Dialog open={companyDialogOpen} onOpenChange={setCompanyDialogOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader><DialogTitle>{editing ? '编辑公司' : '添加公司'}</DialogTitle></DialogHeader>
-          <CompanyForm initial={editing} onSubmit={onSubmitCompany} onCancel={() => setCompanyDialogOpen(false)} />
-        </DialogContent>
+        <FormDialogLayout
+          title={editing ? '编辑公司' : '添加公司'}
+          formId="company-form"
+          onCancel={() => setCompanyDialogOpen(false)}
+         
+          maxWidthClass="sm:max-w-3xl"
+        >
+          <CompanyForm id="company-form" initial={editing} onSubmit={onSubmitCompany} />
+        </FormDialogLayout>
       </Dialog>
 
       <Dialog open={applicationDialogOpen} onOpenChange={setApplicationDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>新建投递</DialogTitle></DialogHeader>
+        <FormDialogLayout title="新建投递" formId="application-form" onCancel={() => setApplicationDialogOpen(false)} maxWidthClass="sm:max-w-2xl">
           <ApplicationForm
+            id="application-form"
             fixedCompanyId={targetCompanyId ?? undefined}
             companies={companies}
             onSubmit={onSubmitApplication}
-            onCancel={() => setApplicationDialogOpen(false)}
           />
-        </DialogContent>
+        </FormDialogLayout>
       </Dialog>
 
       <ConfirmDialog

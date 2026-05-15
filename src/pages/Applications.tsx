@@ -19,7 +19,8 @@ import ApplicationForm from '../components/forms/ApplicationForm'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
+import FormDialogLayout from '../components/common/FormDialogLayout'
+import { Dialog } from '../components/ui/dialog'
 import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popover'
 import { applicationSchema, type ApplicationFormValues } from '../schemas/application.schema'
 import { useApplicationStore } from '../store/useApplicationStore'
@@ -236,7 +237,15 @@ export default function Applications() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>{editing ? '编辑投递' : '新建投递'}</DialogTitle></DialogHeader><ApplicationForm initial={editing} companies={companies} onSubmit={submit} onCancel={() => setDialogOpen(false)} /></DialogContent>
+        <FormDialogLayout
+          title={editing ? '编辑投递' : '新建投递'}
+          formId="application-form"
+          onCancel={() => setDialogOpen(false)}
+         
+          maxWidthClass="sm:max-w-2xl"
+        >
+          <ApplicationForm id="application-form" initial={editing} companies={companies} onSubmit={submit} />
+        </FormDialogLayout>
       </Dialog>
 
       <ConfirmDialog

@@ -6,7 +6,8 @@ import ApplicationForm from '../components/forms/ApplicationForm'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
+import FormDialogLayout from '../components/common/FormDialogLayout'
+import { Dialog } from '../components/ui/dialog'
 import { applicationSchema, type ApplicationFormValues } from '../schemas/application.schema'
 import { useApplicationStore } from '../store/useApplicationStore'
 import { useCalendarStore } from '../store/useCalendarStore'
@@ -69,11 +70,11 @@ export default function CompanyDetail() {
       </div>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl"><DialogHeader><DialogTitle>新建投递</DialogTitle></DialogHeader>
+        <FormDialogLayout title="新建投递" formId="application-form" onCancel={() => setOpen(false)} maxWidthClass="sm:max-w-2xl">
           <ApplicationForm
+            id="application-form"
             fixedCompanyId={id}
             companies={[company]}
-            onCancel={() => setOpen(false)}
             onSubmit={(values: ApplicationFormValues) => {
               const parsed = applicationSchema.parse({ ...values, companyId: id })
               addApplication({ ...parsed, companyId: id, writtenTestAt: parsed.writtenTestAt || undefined, preparationDocUrl: parsed.preparationDocUrl || undefined })
@@ -82,7 +83,7 @@ export default function CompanyDetail() {
               setOpen(false)
             }}
           />
-        </DialogContent>
+        </FormDialogLayout>
       </Dialog>
     </div>
   )

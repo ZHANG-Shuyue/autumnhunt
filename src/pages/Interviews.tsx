@@ -7,7 +7,8 @@ import EmptyState from '../components/common/EmptyState'
 import InterviewForm from '../components/forms/InterviewForm'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
+import FormDialogLayout from '../components/common/FormDialogLayout'
+import { Dialog } from '../components/ui/dialog'
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { useApplicationStore } from '../store/useApplicationStore'
 import { useCalendarStore } from '../store/useCalendarStore'
@@ -147,10 +148,15 @@ export default function Interviews() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>{editing ? '编辑面试' : '新建面试'}</DialogTitle></DialogHeader>
-          <InterviewForm initial={editing} applications={applications} onSubmit={submit} onCancel={() => setDialogOpen(false)} />
-        </DialogContent>
+        <FormDialogLayout
+          title={editing ? '编辑面试' : '新建面试'}
+          formId="interview-form"
+          onCancel={() => setDialogOpen(false)}
+         
+          maxWidthClass="sm:max-w-2xl"
+        >
+          <InterviewForm id="interview-form" initial={editing} applications={applications} onSubmit={submit} />
+        </FormDialogLayout>
       </Dialog>
 
       <ConfirmDialog

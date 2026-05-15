@@ -35,3 +35,18 @@ textarea:focus-visible {
   border-color: #e8d5b7;
   box-shadow: 0 0 0 2px rgba(232, 213, 183, 0.4), 0 0 0 4px #faf7f2;
 }
+
+
+/* v0.2.2: Dialog body 滚动条样式 */
+.dialog-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dialog-scroll::-webkit-scrollbar-thumb {
+  background: #C5BDB5;
+  border-radius: 3px;
+}
+
+.dialog-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}

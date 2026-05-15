@@ -7,7 +7,8 @@ import InterviewForm from '../components/forms/InterviewForm'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog'
+import FormDialogLayout from '../components/common/FormDialogLayout'
+import { Dialog } from '../components/ui/dialog'
 import { interviewSchema, type InterviewFormValues } from '../schemas/interview.schema'
 import { useApplicationStore } from '../store/useApplicationStore'
 import { useCalendarStore } from '../store/useCalendarStore'
@@ -99,12 +100,17 @@ export default function ApplicationDetail() {
       </Card>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader><DialogTitle>{editing ? '编辑面试' : '添加面试'}</DialogTitle></DialogHeader>
+        <FormDialogLayout
+          title={editing ? '编辑面试' : '添加面试'}
+          formId="interview-form"
+          onCancel={() => setOpen(false)}
+         
+          maxWidthClass="sm:max-w-2xl"
+        >
           <InterviewForm
+            id="interview-form"
             initial={editing}
             applications={[application]}
-            onCancel={() => setOpen(false)}
             onSubmit={(values: InterviewFormValues) => {
               const parsed = interviewSchema.parse({ ...values, applicationId: id })
               const payload = { ...parsed, applicationId: id, scheduledAt: new Date(parsed.scheduledAt).toISOString() }
@@ -115,7 +121,7 @@ export default function ApplicationDetail() {
               setOpen(false)
             }}
           />
-        </DialogContent>
+        </FormDialogLayout>
       </Dialog>
 
       <ConfirmDialog
