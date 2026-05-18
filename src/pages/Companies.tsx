@@ -152,11 +152,23 @@ export default function Companies() {
             <option value="name">按公司名</option>
           </select>
           <div className="inline-flex items-center gap-1 rounded-xl border border-neutral-border bg-white p-1">
-            <Button size="sm" variant={view === 'card' ? 'default' : 'ghost'} onClick={() => setView('card')}>
-              <LayoutGrid className="mr-1 h-4 w-4" />卡片
+            <Button
+              size="sm"
+              variant={view === 'card' ? 'default' : 'ghost'}
+              onClick={() => setView('card')}
+              className="whitespace-nowrap px-3"
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span className="ml-1.5">卡片</span>
             </Button>
-            <Button size="sm" variant={view === 'table' ? 'default' : 'ghost'} onClick={() => setView('table')}>
-              <List className="mr-1 h-4 w-4" />表格
+            <Button
+              size="sm"
+              variant={view === 'table' ? 'default' : 'ghost'}
+              onClick={() => setView('table')}
+              className="whitespace-nowrap px-3"
+            >
+              <List className="h-4 w-4" />
+              <span className="ml-1.5">表格</span>
             </Button>
           </div>
         </div>
