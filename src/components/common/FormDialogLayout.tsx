@@ -1,3 +1,4 @@
+import { ArrowLeft } from 'lucide-react'
 import { Button } from '../ui/button'
 import { DialogContent, DialogHeader, DialogTitle } from '../ui/dialog'
 
@@ -20,15 +21,20 @@ export default function FormDialogLayout({
   maxWidthClass = 'sm:max-w-3xl',
 }: FormDialogLayoutProps) {
   return (
-    <DialogContent className={`w-[95vw] ${maxWidthClass} max-h-[85vh] overflow-hidden rounded-2xl p-0`}>
-      <div className="flex h-full max-h-[85vh] flex-col bg-neutral-card">
-        <DialogHeader className="shrink-0 border-b border-neutral-border px-6 pb-4 pt-6">
-          <DialogTitle>{title}</DialogTitle>
+    <DialogContent className={`left-0 top-0 h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 overflow-hidden rounded-none p-0 sm:left-1/2 sm:top-1/2 sm:h-auto sm:w-[95vw] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl ${maxWidthClass}`}>
+      <div className="flex h-full max-h-[100dvh] flex-col bg-neutral-card sm:max-h-[85vh]">
+        <DialogHeader className="shrink-0 border-b border-neutral-border px-4 pb-3 pt-4 sm:px-6 sm:pb-4 sm:pt-6">
+          <div className="flex items-center gap-2">
+            <button type="button" onClick={onCancel} className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg hover:bg-primary-cream/20 sm:hidden">
+              <ArrowLeft className="h-4 w-4" />
+            </button>
+            <DialogTitle>{title}</DialogTitle>
+          </div>
         </DialogHeader>
 
-        <div className="dialog-scroll flex-1 overflow-y-auto px-6 py-4">{children}</div>
+        <div className="dialog-scroll flex-1 overflow-y-auto px-4 py-4 sm:px-6">{children}</div>
 
-        <div className="shrink-0 border-t border-neutral-border bg-neutral-card px-6 pb-6 pt-4">
+        <div className="sticky bottom-0 shrink-0 border-t border-neutral-border bg-neutral-card px-4 pb-4 pt-3 sm:px-6 sm:pb-6 sm:pt-4">
           <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <Button
               type="button"

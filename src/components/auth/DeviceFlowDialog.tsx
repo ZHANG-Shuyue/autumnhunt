@@ -5,29 +5,16 @@ import { Button } from '../ui/button'
 import { useAuthStore } from '../../store/useAuthStore'
 
 export default function DeviceFlowDialog() {
-  const {
-    deviceFlowState,
-    currentUserCode,
-    currentVerificationUri,
-    expiresAt,
-    hasOpenedVerificationPage,
-    deviceFlowError,
-    cancelDeviceFlow,
-    startDeviceFlow,
-    markVerificationOpened,
-    clearDeviceFlowError,
-  } = useAuthStore((s) => ({
-    deviceFlowState: s.deviceFlowState,
-    currentUserCode: s.currentUserCode,
-    currentVerificationUri: s.currentVerificationUri,
-    expiresAt: s.expiresAt,
-    hasOpenedVerificationPage: s.hasOpenedVerificationPage,
-    deviceFlowError: s.deviceFlowError,
-    cancelDeviceFlow: s.cancelDeviceFlow,
-    startDeviceFlow: s.startDeviceFlow,
-    markVerificationOpened: s.markVerificationOpened,
-    clearDeviceFlowError: s.clearDeviceFlowError,
-  }))
+  const deviceFlowState = useAuthStore((s) => s.deviceFlowState)
+  const currentUserCode = useAuthStore((s) => s.currentUserCode)
+  const currentVerificationUri = useAuthStore((s) => s.currentVerificationUri)
+  const expiresAt = useAuthStore((s) => s.expiresAt)
+  const hasOpenedVerificationPage = useAuthStore((s) => s.hasOpenedVerificationPage)
+  const deviceFlowError = useAuthStore((s) => s.deviceFlowError)
+  const cancelDeviceFlow = useAuthStore((s) => s.cancelDeviceFlow)
+  const startDeviceFlow = useAuthStore((s) => s.startDeviceFlow)
+  const markVerificationOpened = useAuthStore((s) => s.markVerificationOpened)
+  const clearDeviceFlowError = useAuthStore((s) => s.clearDeviceFlowError)
 
   const [now, setNow] = useState(Date.now())
   useEffect(() => {

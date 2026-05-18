@@ -19,6 +19,7 @@ export const STORE_KEYS = {
   companies: 'autumnhunt-companies',
   applications: 'autumnhunt-applications',
   interviews: 'autumnhunt-interviews',
+  resumes: 'autumnhunt-resumes',
   calendar: 'autumnhunt-calendar',
   auth: 'autumnhunt-auth',
   sync: 'autumnhunt-sync',

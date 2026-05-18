@@ -5,7 +5,8 @@ import { toast } from 'sonner'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import { STORE_KEYS } from '../config/github'
-import { pullAll, pushAll } from '../services/syncEngine'
+import { formatExactTime, formatRelativeTime } from '../lib/time'
+import { syncPull, syncPush } from '../services/githubSync'
 import { useApplicationStore } from '../store/useApplicationStore'
 import { useAuthStore } from '../store/useAuthStore'
 import { useCalendarStore } from '../store/useCalendarStore'
@@ -24,12 +25,14 @@ export default function Settings() {
   const [showLogs, setShowLogs] = useState(false)
   const [syncing, setSyncing] = useState(false)
 
-  const { user, dataRepo, logout } = useAuthStore((s) => ({
-    user: s.user,
-    dataRepo: s.dataRepo,
-    logout: s.logout,
-  }))
-  const sync = useSyncStore((s) => s)
+  const user = useAuthStore((s) => s.user)
+  const token = useAuthStore((s) => s.token)
+  const dataRepo = useAuthStore((s) => s.dataRepo)
+  const logout = useAuthStore((s) => s.logout)
+  const syncStatus = useSyncStore((s) => s.status)
+  const syncLastSyncAt = useSyncStore((s) => s.lastSyncAt)
+  const syncErrorMessage = useSyncStore((s) => s.errorMessage)
+  const resetSync = useSyncStore((s) => s.reset)
   const companies = useCompanyStore((s) => s.companies)
   const applications = useApplicationStore((s) => s.applications)
   const interviews = useInterviewStore((s) => s.interviews)
@@ -44,11 +47,22 @@ export default function Settings() {
   const doSyncNow = async () => {
     setSyncing(true)
     try {
-      await pushAll()
-      await pullAll()
-      toast.success('同步完成')
+      await syncPush()
+      toast.success('推送完成')
     } catch {
-      toast.error('同步失败，请稍后重试')
+      toast.error('推送失败，请稍后重试')
+    } finally {
+      setSyncing(false)
+    }
+  }
+
+  const doPullNow = async () => {
+    setSyncing(true)
+    try {
+      await syncPull()
+      toast.success('拉取完成')
+    } catch {
+      toast.error('拉取失败，请稍后重试')
     } finally {
       setSyncing(false)
     }
@@ -110,6 +124,7 @@ export default function Settings() {
     localStorage.removeItem(STORE_KEYS.companies)
     localStorage.removeItem(STORE_KEYS.applications)
     localStorage.removeItem(STORE_KEYS.interviews)
+    localStorage.removeItem(STORE_KEYS.resumes)
     localStorage.removeItem(STORE_KEYS.calendar)
     toast.success('本地缓存已清空，请刷新页面')
   }
@@ -117,6 +132,7 @@ export default function Settings() {
   const handleLogout = async () => {
     if (!window.confirm('确认退出登录？')) return
     await logout()
+    resetSync()
     toast.success('已退出登录')
   }
 
@@ -140,33 +156,31 @@ export default function Settings() {
       </Card>
 
       <Card className="space-y-3">
-        <h2 className="text-xl font-semibold">同步状态</h2>
-        <p className="text-sm text-neutral-muted">上次拉取：{formatTime(sync.lastPullAt)}</p>
-        <p className="text-sm text-neutral-muted">上次推送：{formatTime(sync.lastPushAt)}</p>
-        <p className="text-sm text-neutral-muted">待同步变更：{sync.pendingChanges}</p>
-        <div className="flex items-center gap-3">
-          <label className="text-sm">自动同步</label>
-          <input
-            type="checkbox"
-            checked={sync.autoSyncEnabled}
-            onChange={(event) => sync.setAutoSyncEnabled(event.target.checked)}
-            className="h-4 w-4"
-          />
-        </div>
-        <div className="flex items-center gap-2">
-          <Button onClick={() => void doSyncNow()} disabled={syncing}>立即同步</Button>
+        <h2 className="text-xl font-semibold">云同步</h2>
+        <p className="text-sm text-neutral-muted">GitHub 账户：{token ? `已登录（${user?.login ?? '未知用户'}）` : '未登录'}</p>
+        <p className="text-sm text-neutral-muted">当前状态：{syncStatus}</p>
+        <p className="text-sm text-neutral-muted">上次同步：{formatRelativeTime(syncLastSyncAt)}</p>
+        <p className="text-xs text-neutral-muted">同步时间：{formatExactTime(syncLastSyncAt)}</p>
+        {syncErrorMessage && <p className="text-sm text-primary-rose">错误信息：{syncErrorMessage}</p>}
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={() => void doPullNow()} disabled={syncing}>
+            立即拉取
+          </Button>
+          <Button onClick={() => void doSyncNow()} disabled={syncing}>
+            立即推送
+          </Button>
+          <Button variant="outline" onClick={() => void handleLogout()}>
+            退出登录
+          </Button>
           <Button variant="ghost" onClick={() => setShowLogs((v) => !v)}>
-            {showLogs ? '收起日志' : '同步日志'}
+            {showLogs ? '收起详情' : '查看详情'}
           </Button>
         </div>
         {showLogs && (
-          <div className="max-h-56 space-y-1 overflow-auto rounded-xl border border-neutral-border bg-neutral-bg p-3 text-xs">
-            {sync.syncLogs.length === 0 && <p className="text-neutral-muted">暂无日志</p>}
-            {sync.syncLogs.map((log) => (
-              <p key={log.id} className={log.level === 'error' ? 'text-primary-rose' : log.level === 'success' ? 'text-primary-sage' : 'text-neutral-muted'}>
-                [{new Date(log.time).toLocaleTimeString('zh-CN')}] {log.message}
-              </p>
-            ))}
+          <div className="rounded-xl border border-neutral-border bg-neutral-bg p-3 text-xs text-neutral-muted">
+            <p>仓库：{repoUrl}</p>
+            <p>同步状态：{syncStatus}</p>
+            <p>最近同步：{formatTime(syncLastSyncAt)}</p>
           </div>
         )}
       </Card>
@@ -194,6 +208,9 @@ export default function Settings() {
           数据统计：公司 {companies.length} / 投递 {applications.length} / 面试 {interviews.length} / 日历事件 {events.length}
         </p>
       </Card>
+
+
+      
 
       <Card className="space-y-3">
         <h2 className="text-xl font-semibold">分享 ⭐</h2>

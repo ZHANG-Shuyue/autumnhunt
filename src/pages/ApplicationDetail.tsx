@@ -9,18 +9,31 @@ import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import FormDialogLayout from '../components/common/FormDialogLayout'
 import { Dialog } from '../components/ui/dialog'
+import { fetchResumeFile } from '../services/githubSync'
 import { interviewSchema, type InterviewFormValues } from '../schemas/interview.schema'
 import { useApplicationStore } from '../store/useApplicationStore'
+import { useAuthStore } from '../store/useAuthStore'
 import { useCalendarStore } from '../store/useCalendarStore'
 import { useCompanyStore } from '../store/useCompanyStore'
 import { useInterviewStore } from '../store/useInterviewStore'
+import { useResumeStore } from '../store/useResumeStore'
 import type { Interview } from '../types'
+
+function safeDecode(value: string) {
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return value
+  }
+}
 
 export default function ApplicationDetail() {
   const { id = '' } = useParams()
   const navigate = useNavigate()
+  const token = useAuthStore((s) => s.token)
   const application = useApplicationStore((s) => s.getById(id))
   const companies = useCompanyStore((s) => s.companies)
+  const resumes = useResumeStore((s) => s.resumes)
   const interviews = useInterviewStore((s) => s.interviews)
   const addInterview = useInterviewStore((s) => s.addInterview)
   const updateInterview = useInterviewStore((s) => s.updateInterview)
@@ -46,6 +59,25 @@ export default function ApplicationDetail() {
   }
 
   const company = companies.find((item) => item.id === application.companyId)
+  const resume = resumes.find((item) => item.id === application.resumeId)
+
+  const openResumePreview = async () => {
+    if (!resume) return
+    if (resume.source === 'link') {
+      if (resume.externalUrl) window.open(resume.externalUrl, '_blank', 'noopener,noreferrer')
+      return
+    }
+
+    if (!resume.filePath || !token) return
+    try {
+      const blob = await fetchResumeFile(token, resume.filePath)
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank', 'noopener,noreferrer')
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
+    } catch {
+      toast.error('简历预览失败')
+    }
+  }
 
   return (
     <div className="space-y-4">
@@ -64,7 +96,16 @@ export default function ApplicationDetail() {
       <Card>
         <h3 className="mb-3 font-semibold">基本信息</h3>
         <div className="grid grid-cols-1 gap-2 text-sm text-neutral-muted md:grid-cols-2">
-          <p>简历版本：{application.resumeFile ?? '-'}</p>
+          <p>
+            使用简历：
+            {resume ? (
+              <button type="button" className="ml-1 underline-offset-2 hover:underline" onClick={() => void openResumePreview()}>
+                📄 {safeDecode(resume.name)}
+              </button>
+            ) : (
+              '-'
+            )}
+          </p>
           <p>笔试日期：{application.writtenTestAt ?? '-'}</p>
           <p>笔试结果：{application.writtenTestResult ?? '-'}</p>
           <p>最终结果：{application.finalResult ?? '-'}</p>

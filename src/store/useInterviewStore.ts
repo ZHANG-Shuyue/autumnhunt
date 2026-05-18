@@ -3,11 +3,11 @@ import { nanoid } from 'nanoid'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { STORE_KEYS } from '../config/github'
+import { celebrate } from '../lib/celebrate'
 import { mockInterviews } from '../mock/interviews'
-import { queuePush } from '../services/syncBridge'
+import { schedulePush } from '../services/syncDebouncer'
 import type { Interview } from '../types'
 import { ensureUpdatedAtList, nowIso } from '../utils/record'
-import { useSyncStore } from './useSyncStore'
 
 interface InterviewState {
   interviews: Interview[]
@@ -21,8 +21,7 @@ interface InterviewState {
 }
 
 function markDirty() {
-  useSyncStore.getState().markPendingChange()
-  queuePush('interviews')
+  schedulePush()
 }
 
 export const useInterviewStore = create<InterviewState>()(
@@ -36,10 +35,17 @@ export const useInterviewStore = create<InterviewState>()(
         return id
       },
       updateInterview: (id, payload) => {
+        const prev = get().interviews.find((item) => item.id === id)
+
         set((state) => ({
           interviews: state.interviews.map((item) => (item.id === id ? { ...item, ...payload, updatedAt: nowIso() } : item)),
         }))
         markDirty()
+
+        const next = get().interviews.find((item) => item.id === id)
+        if (prev?.result !== 'pass' && next?.result === 'pass') {
+          celebrate('pass')
+        }
       },
       deleteInterview: (id) => {
         set((state) => ({ interviews: state.interviews.filter((item) => item.id !== id) }))

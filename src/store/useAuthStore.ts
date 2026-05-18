@@ -2,8 +2,8 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { DEFAULT_DATA_REPO, POLL_INTERVAL_MS, STORE_KEYS } from '../config/github'
 import { pollForToken, requestDeviceCode, revokeToken } from '../services/githubAuth'
-import { ensureDataRepo, getCurrentUser, initOctokit } from '../services/github'
-import { disableAutoSync, enableAutoSync, pullAll } from '../services/syncEngine'
+import { getCurrentUser, initOctokit } from '../services/github'
+import { syncPull } from '../services/githubSync'
 import type { GitHubUser } from '../types/github'
 import { decryptToken, encryptToken } from '../utils/tokenVault'
 import { useSyncStore } from './useSyncStore'
@@ -56,16 +56,13 @@ export const useAuthStore = create<AuthStoreState>()(
           initOctokit(token)
           const user = await getCurrentUser()
           set({ token, user, isAuthenticated: true })
-          await ensureDataRepo(get().dataRepo)
-          await pullAll()
-          enableAutoSync()
+          await syncPull()
         } catch {
           set({ token: null, encryptedToken: null, user: null, isAuthenticated: false })
         }
       },
       startDeviceFlow: async () => {
         cancelFlowFlag = false
-        const syncStore = useSyncStore.getState()
         set({
           deviceFlowState: 'requesting',
           deviceFlowError: null,
@@ -100,11 +97,7 @@ export const useAuthStore = create<AuthStoreState>()(
             deviceFlowState: 'success',
           })
 
-          await ensureDataRepo(get().dataRepo)
-          await pullAll()
-          enableAutoSync()
-
-          syncStore.addLog('登录成功，已完成云端初始化', 'success')
+          await syncPull()
           setTimeout(() => {
             const state = get()
             if (state.deviceFlowState === 'success') {
@@ -119,7 +112,7 @@ export const useAuthStore = create<AuthStoreState>()(
           }, 900)
         } catch (error) {
           const message = error instanceof Error ? error.message : '登录失败，请稍后重试'
-          useSyncStore.getState().addLog(`登录失败：${message}`, 'error')
+          useSyncStore.getState().setStatus('error', message)
           set({
             deviceFlowState: 'error',
             deviceFlowError: message,
@@ -143,7 +136,6 @@ export const useAuthStore = create<AuthStoreState>()(
         if (token) {
           await revokeToken(token)
         }
-        disableAutoSync()
         useSyncStore.getState().reset()
         set({
           token: null,

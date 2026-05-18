@@ -1,22 +1,22 @@
-import {
-  CORS_PROXY,
-  FALLBACK_CORS_PROXY,
-  GITHUB_CLIENT_ID,
-  GITHUB_SCOPES,
-  POLL_INTERVAL_MS,
-  POLL_TIMEOUT_MS,
-} from '../config/github'
+// CORS 代理使用自建 Cloudflare Worker:autumnhunt-proxy.sz125.workers.dev
+import { GITHUB_CLIENT_ID, GITHUB_SCOPES, POLL_INTERVAL_MS, POLL_TIMEOUT_MS } from '../config/github'
 import type { DeviceCodeResponse, DeviceTokenPending, DeviceTokenSuccess } from '../types/github'
+
+const CORS_PROXY = 'https://autumnhunt-proxy.sz125.workers.dev/?url='
+const FALLBACK_CORS_PROXY = 'https://corsproxy.io/?url='
 
 const DEVICE_CODE_ENDPOINT = 'https://github.com/login/device/code'
 const ACCESS_TOKEN_ENDPOINT = 'https://github.com/login/oauth/access_token'
 
-function buildProxyUrls(url: string) {
-  return [`${CORS_PROXY}/${url}`, `${FALLBACK_CORS_PROXY}${encodeURIComponent(url)}`]
+function buildProxyUrls(targetUrl: string) {
+  return [
+    `${CORS_PROXY}${encodeURIComponent(targetUrl)}`,
+    `${FALLBACK_CORS_PROXY}${encodeURIComponent(targetUrl)}`,
+  ]
 }
 
-async function postDeviceEndpoint<T>(url: string, body: URLSearchParams): Promise<T> {
-  const candidates = buildProxyUrls(url)
+async function postDeviceEndpoint<T>(targetUrl: string, payload: Record<string, string>): Promise<T> {
+  const candidates = buildProxyUrls(targetUrl)
   let lastError: unknown = null
 
   for (const endpoint of candidates) {
@@ -25,9 +25,9 @@ async function postDeviceEndpoint<T>(url: string, body: URLSearchParams): Promis
         method: 'POST',
         headers: {
           Accept: 'application/json',
-          'Content-Type': 'application/x-www-form-urlencoded',
+          'Content-Type': 'application/json',
         },
-        body,
+        body: JSON.stringify(payload),
       })
 
       if (!response.ok) {
@@ -44,13 +44,10 @@ async function postDeviceEndpoint<T>(url: string, body: URLSearchParams): Promis
 }
 
 export async function requestDeviceCode(): Promise<DeviceCodeResponse> {
-  return postDeviceEndpoint<DeviceCodeResponse>(
-    DEVICE_CODE_ENDPOINT,
-    new URLSearchParams({
-      client_id: GITHUB_CLIENT_ID,
-      scope: GITHUB_SCOPES,
-    }),
-  )
+  return postDeviceEndpoint<DeviceCodeResponse>(DEVICE_CODE_ENDPOINT, {
+    client_id: GITHUB_CLIENT_ID,
+    scope: GITHUB_SCOPES,
+  })
 }
 
 function sleep(ms: number) {
@@ -62,14 +59,11 @@ export async function pollForToken(deviceCode: string, interval = POLL_INTERVAL_
   let pollInterval = interval
 
   while (Date.now() - startedAt < POLL_TIMEOUT_MS) {
-    const result = await postDeviceEndpoint<DeviceTokenSuccess | DeviceTokenPending>(
-      ACCESS_TOKEN_ENDPOINT,
-      new URLSearchParams({
-        client_id: GITHUB_CLIENT_ID,
-        device_code: deviceCode,
-        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
-      }),
-    )
+    const result = await postDeviceEndpoint<DeviceTokenSuccess | DeviceTokenPending>(ACCESS_TOKEN_ENDPOINT, {
+      client_id: GITHUB_CLIENT_ID,
+      device_code: deviceCode,
+      grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+    })
 
     if ('access_token' in result && result.access_token) {
       return result.access_token

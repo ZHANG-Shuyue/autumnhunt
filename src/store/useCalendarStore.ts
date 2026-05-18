@@ -3,14 +3,13 @@ import { nanoid } from 'nanoid'
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { STORE_KEYS } from '../config/github'
-import { queuePush } from '../services/syncBridge'
+import { schedulePush } from '../services/syncDebouncer'
 import type { CalendarEvent } from '../types'
 import { buildAutoEvents } from '../utils/syncCalendar'
 import { ensureUpdatedAtList, nowIso } from '../utils/record'
 import { useApplicationStore } from './useApplicationStore'
 import { useCompanyStore } from './useCompanyStore'
 import { useInterviewStore } from './useInterviewStore'
-import { useSyncStore } from './useSyncStore'
 
 interface CalendarState {
   events: CalendarEvent[]
@@ -29,8 +28,7 @@ interface CalendarState {
 }
 
 function markDirty() {
-  useSyncStore.getState().markPendingChange()
-  queuePush('events')
+  schedulePush()
 }
 
 export const useCalendarStore = create<CalendarState>()(

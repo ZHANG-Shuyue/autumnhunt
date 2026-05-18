@@ -50,3 +50,11 @@ textarea:focus-visible {
 .dialog-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
+
+body.is-dragging * {
+  transition: none !important;
+}
+
+body.is-dragging .hover\:shadow-lg:hover {
+  box-shadow: none !important;
+}

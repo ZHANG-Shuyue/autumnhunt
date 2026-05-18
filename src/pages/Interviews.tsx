@@ -26,6 +26,7 @@ export default function Interviews() {
 
   const [view, setView] = useState<'timeline' | 'table'>('timeline')
   const [filter, setFilter] = useState<'all' | 'upcoming' | 'done'>('all')
+  const [showFilters, setShowFilters] = useState(false)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Interview | undefined>()
   const [deletingId, setDeletingId] = useState<string | null>(null)
@@ -62,20 +63,27 @@ export default function Interviews() {
   }
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs value={view} onValueChange={(v) => setView(v as typeof view)}>
-          <TabsList>
-            <TabsTrigger value="timeline">时间线</TabsTrigger>
-            <TabsTrigger value="table">表格</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        <div className="inline-flex gap-2">
-          <Button size="sm" variant={filter === 'all' ? 'default' : 'outline'} onClick={() => setFilter('all')}>所有面试</Button>
-          <Button size="sm" variant={filter === 'upcoming' ? 'default' : 'outline'} onClick={() => setFilter('upcoming')}>即将到来</Button>
-          <Button size="sm" variant={filter === 'done' ? 'default' : 'outline'} onClick={() => setFilter('done')}>已完成</Button>
+    <div className="space-y-4 md:space-y-5">
+      <div className="space-y-3">
+        <div className="flex items-center justify-between gap-2">
+          <Tabs value={view} onValueChange={(v) => setView(v as typeof view)}>
+            <TabsList>
+              <TabsTrigger value="timeline">时间线</TabsTrigger>
+              <TabsTrigger value="table">表格</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Button size="sm" variant="outline" className="md:hidden" onClick={() => setShowFilters((v) => !v)}>
+            筛选
+          </Button>
         </div>
-        <Button onClick={() => { setEditing(undefined); setDialogOpen(true) }}><Plus className="mr-1 h-4 w-4" />新建面试</Button>
+        <div className={`flex flex-col gap-2 md:flex-row md:items-center md:justify-between ${showFilters ? 'flex' : 'hidden md:flex'}`}>
+          <div className="inline-flex flex-wrap gap-2">
+            <Button size="sm" variant={filter === 'all' ? 'default' : 'outline'} onClick={() => setFilter('all')}>所有面试</Button>
+            <Button size="sm" variant={filter === 'upcoming' ? 'default' : 'outline'} onClick={() => setFilter('upcoming')}>即将到来</Button>
+            <Button size="sm" variant={filter === 'done' ? 'default' : 'outline'} onClick={() => setFilter('done')}>已完成</Button>
+          </div>
+          <Button onClick={() => { setEditing(undefined); setDialogOpen(true) }}><Plus className="mr-1 h-4 w-4" />新建面试</Button>
+        </div>
       </div>
 
       {!list.length ? (

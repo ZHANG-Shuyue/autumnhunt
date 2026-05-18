@@ -1,5 +1,6 @@
 import { Ellipsis, Plus, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import ConfirmDialog from '../components/common/ConfirmDialog'
 import EmptyState from '../components/common/EmptyState'
@@ -15,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '../components/ui/popove
 import { Tabs, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { applicationSchema, type ApplicationFormValues } from '../schemas/application.schema'
 import { companySchema, type CompanyFormValues } from '../schemas/company.schema'
+import { cn } from '../lib/utils'
 import { useApplicationStore } from '../store/useApplicationStore'
 import { useCalendarStore } from '../store/useCalendarStore'
 import { useCompanyStore } from '../store/useCompanyStore'
@@ -37,12 +39,14 @@ const statusMap: Record<Company['status'], { label: string; variant: 'sage' | 'a
 }
 
 export default function Companies() {
+  const navigate = useNavigate()
   const { companies, addCompany, updateCompany, deleteCompany } = useCompanyStore()
   const addApplication = useApplicationStore((s) => s.addApplication)
   const syncFromOtherStores = useCalendarStore((s) => s.syncFromOtherStores)
 
   const [keyword, setKeyword] = useState('')
   const [industry, setIndustry] = useState('all')
+  const [showFilters, setShowFilters] = useState(false)
   const [status, setStatus] = useState<StatusFilter>('all')
   const [sortBy, setSortBy] = useState<'deadline' | 'createdAt' | 'name'>('deadline')
   const [companyDialogOpen, setCompanyDialogOpen] = useState(false)
@@ -84,7 +88,14 @@ export default function Companies() {
   const onSubmitApplication = (values: ApplicationFormValues) => {
     if (!targetCompanyId) return
     const parsed = applicationSchema.parse({ ...values, companyId: targetCompanyId })
-    addApplication({ ...parsed, companyId: targetCompanyId, writtenTestAt: parsed.writtenTestAt || undefined, preparationDocUrl: parsed.preparationDocUrl || undefined })
+    addApplication({
+      ...parsed,
+      companyId: targetCompanyId,
+      writtenTestAt: parsed.writtenTestAt || undefined,
+      jobUrl: parsed.jobUrl || undefined,
+      preparationDocUrl: parsed.preparationDocUrl || undefined,
+      resumeId: parsed.resumeId || undefined,
+    })
     const cname = companies.find((c) => c.id === targetCompanyId)?.name ?? '未知公司'
     pushActivity(`新增投递：${cname} · ${parsed.position}`)
     syncFromOtherStores()
@@ -94,9 +105,19 @@ export default function Companies() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-        <div className="flex flex-1 flex-col gap-3 xl:flex-row xl:items-center">
+    <div className="space-y-4 md:space-y-6">
+      <div className="flex flex-col gap-3 md:gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div className="flex w-full items-center gap-2 md:hidden">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-muted" />
+            <Input placeholder="搜索公司..." value={keyword} onChange={(e) => setKeyword(e.target.value)} className="pl-9" />
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setShowFilters((v) => !v)}>
+            筛选
+          </Button>
+        </div>
+
+        <div className={cn('flex flex-1 flex-col gap-3 xl:flex-row xl:items-center', showFilters ? 'flex' : 'hidden md:flex')}>
           <div className="relative w-full xl:max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-muted" />
             <Input placeholder="搜索公司..." value={keyword} onChange={(e) => setKeyword(e.target.value)} className="pl-9" />
@@ -123,34 +144,83 @@ export default function Companies() {
       {list.length === 0 ? (
         <EmptyState text="还没有公司哦，点击右上角添加第一家心仪的公司吧 🌱" />
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
           {list.map((company) => {
             const s = statusMap[company.status]
             return (
-              <Card key={company.id} className="space-y-4">
+              <Card
+                key={company.id}
+                className="space-y-4 cursor-pointer transition-shadow hover:shadow-lg"
+                role="button"
+                tabIndex={0}
+                onClick={() => navigate(`/companies/${company.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    navigate(`/companies/${company.id}`)
+                  }
+                }}
+              >
                 <div className="flex items-start justify-between">
                   <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary-cream/70 to-primary-mist/60" />
                   {/* v0.2.1: 编辑/删除收纳到 ... 菜单 */}
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button type="button" className="rounded-lg p-1 hover:bg-primary-cream/25"><Ellipsis className="h-4 w-4" /></button>
+                      <button
+                        type="button"
+                        className="rounded-lg p-1 hover:bg-primary-cream/25"
+                        onClick={(event) => event.stopPropagation()}
+                      >
+                        <Ellipsis className="h-4 w-4" />
+                      </button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-28 rounded-xl p-1">
-                      <button type="button" className="block w-full rounded-md px-2 py-1 text-left text-sm hover:bg-primary-cream/20" onClick={() => { setEditing(company); setCompanyDialogOpen(true) }}>编辑</button>
-                      <button type="button" className="block w-full rounded-md px-2 py-1 text-left text-sm hover:bg-primary-ash/20" onClick={() => setDeletingId(company.id)}>删除</button>
+                    <PopoverContent className="w-28 rounded-xl p-1" onClick={(event) => event.stopPropagation()}>
+                      <button
+                        type="button"
+                        className="block w-full rounded-md px-2 py-1 text-left text-sm hover:bg-primary-cream/20"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setEditing(company)
+                          setCompanyDialogOpen(true)
+                        }}
+                      >
+                        编辑
+                      </button>
+                      <button
+                        type="button"
+                        className="block w-full rounded-md px-2 py-1 text-left text-sm hover:bg-primary-ash/20"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          setDeletingId(company.id)
+                        }}
+                      >
+                        删除
+                      </button>
                     </PopoverContent>
                   </Popover>
                 </div>
                 <div>
-                  <h3 className="text-lg font-semibold">{company.name}</h3>
+                  <h3 className="text-base font-semibold sm:text-lg">{company.name}</h3>
                   <div className="mt-2 flex gap-2">
                     <Badge variant="sage">{company.industry}</Badge>
                     <Badge variant={s.variant}>{s.label}</Badge>
                   </div>
                 </div>
-                <p className="text-sm text-neutral-muted">截止日期：{company.deadline ?? '待更新'}</p>
+                <p className="text-xs text-neutral-muted sm:text-sm">截止日期：{company.deadline ?? '待更新'}</p>
+                {(company.recruitingLinks?.length ?? 0) > 0 && (
+                  <p className="text-xs text-neutral-muted">🔗 {company.recruitingLinks?.length ?? 0} 个招聘链接</p>
+                )}
                 {/* v0.2.1: 主操作按钮改为 + 投递 */}
-                <Button className="w-full" onClick={() => { setTargetCompanyId(company.id); setApplicationDialogOpen(true) }}>+ 投递</Button>
+                <Button
+                  className="w-full"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    setTargetCompanyId(company.id)
+                    setApplicationDialogOpen(true)
+                  }}
+                >
+                  + 投递
+                </Button>
               </Card>
             )
           })}

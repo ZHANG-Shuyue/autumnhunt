@@ -11,6 +11,7 @@ export const interviewSchema = z.object({
   questions: z.string().optional(),
   selfReview: z.string().optional(),
   rating: z.coerce.number().min(1).max(5).optional(),
+  result: z.enum(['pending', 'pass', 'fail']).optional(),
 })
 
 export type InterviewFormValues = z.infer<typeof interviewSchema>

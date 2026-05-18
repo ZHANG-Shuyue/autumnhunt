@@ -34,6 +34,7 @@ export default function InterviewForm({ id = 'interview-form', initial, applicat
       questions: initial?.questions ?? '',
       selfReview: initial?.selfReview ?? '',
       rating: initial?.rating ?? 3,
+      result: initial?.result ?? 'pending',
     },
   })
 
@@ -51,7 +52,10 @@ export default function InterviewForm({ id = 'interview-form', initial, applicat
       <div><label className="mb-1 block text-sm">面试官</label><Input {...form.register('interviewer')} /></div>
       <div><label className="mb-1 block text-sm">面试问题</label><Textarea rows={3} {...form.register('questions')} /></div>
       <div><label className="mb-1 block text-sm">回答复盘</label><Textarea rows={3} {...form.register('selfReview')} /></div>
-      <div><label className="mb-1 block text-sm">评分</label><StarRating value={form.watch('rating') ?? 0} onChange={(v) => form.setValue('rating', v)} /></div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div><label className="mb-1 block text-sm">评分</label><StarRating value={form.watch('rating') ?? 0} onChange={(v) => form.setValue('rating', v)} /></div>
+        <div><label className="mb-1 block text-sm">结果</label><select {...form.register('result')} className="h-10 w-full rounded-xl border border-neutral-border bg-white px-3 text-sm"><option value="pending">待定</option><option value="pass">通过</option><option value="fail">未通过</option></select></div>
+      </div>
     </form>
   )
 }

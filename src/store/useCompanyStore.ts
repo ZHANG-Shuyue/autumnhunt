@@ -3,16 +3,18 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { STORE_KEYS } from '../config/github'
 import { mockCompanies } from '../mock/companies'
-import { queuePush } from '../services/syncBridge'
-import type { Company } from '../types'
+import { schedulePush } from '../services/syncDebouncer'
+import type { Company, RecruitingLink } from '../types'
 import { ensureUpdatedAtList, nowIso } from '../utils/record'
-import { useSyncStore } from './useSyncStore'
 
 interface CompanyState {
   companies: Company[]
   addCompany: (payload: Omit<Company, 'id' | 'createdAt' | 'updatedAt'> & { createdAt?: string }) => string
   updateCompany: (id: string, payload: Partial<Company>) => void
   deleteCompany: (id: string) => void
+  addRecruitingLink: (companyId: string, link: Omit<RecruitingLink, 'id' | 'createdAt'>) => void
+  updateRecruitingLink: (companyId: string, linkId: string, patch: Partial<Omit<RecruitingLink, 'id' | 'createdAt'>>) => void
+  deleteRecruitingLink: (companyId: string, linkId: string) => void
   replaceCompanies: (companies: Company[]) => void
   getCompanyById: (id: string) => Company | undefined
   searchCompanies: (keyword: string) => Company[]
@@ -21,8 +23,7 @@ interface CompanyState {
 }
 
 function markDirty() {
-  useSyncStore.getState().markPendingChange()
-  queuePush('companies')
+  schedulePush()
 }
 
 export const useCompanyStore = create<CompanyState>()(
@@ -50,6 +51,57 @@ export const useCompanyStore = create<CompanyState>()(
       },
       deleteCompany: (id) => {
         set((state) => ({ companies: state.companies.filter((item) => item.id !== id) }))
+        markDirty()
+      },
+      addRecruitingLink: (companyId, link) => {
+        set((state) => ({
+          companies: state.companies.map((company) => {
+            if (company.id !== companyId) return company
+            const next: RecruitingLink = {
+              id: nanoid(),
+              createdAt: nowIso(),
+              ...link,
+            }
+            return {
+              ...company,
+              updatedAt: nowIso(),
+              recruitingLinks: [next, ...(company.recruitingLinks ?? [])],
+            }
+          }),
+        }))
+        markDirty()
+      },
+      updateRecruitingLink: (companyId, linkId, patch) => {
+        set((state) => ({
+          companies: state.companies.map((company) => {
+            if (company.id !== companyId) return company
+            return {
+              ...company,
+              updatedAt: nowIso(),
+              recruitingLinks: (company.recruitingLinks ?? []).map((link) =>
+                link.id === linkId
+                  ? {
+                      ...link,
+                      ...patch,
+                    }
+                  : link,
+              ),
+            }
+          }),
+        }))
+        markDirty()
+      },
+      deleteRecruitingLink: (companyId, linkId) => {
+        set((state) => ({
+          companies: state.companies.map((company) => {
+            if (company.id !== companyId) return company
+            return {
+              ...company,
+              updatedAt: nowIso(),
+              recruitingLinks: (company.recruitingLinks ?? []).filter((link) => link.id !== linkId),
+            }
+          }),
+        }))
         markDirty()
       },
       replaceCompanies: (companies) => {
