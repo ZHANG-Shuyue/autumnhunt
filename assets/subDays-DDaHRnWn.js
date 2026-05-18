@@ -1,0 +1,1 @@
+import{l as e}from"./useAuthStore-CzKXy-FA.js";function t(t,n,r){return e(t,-n,r)}export{t};
