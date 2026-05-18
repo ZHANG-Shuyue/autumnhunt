@@ -1,20 +1,42 @@
 import JSZip from 'jszip'
 import { QRCodeSVG } from 'qrcode.react'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { toast } from 'sonner'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog'
 import { STORE_KEYS } from '../config/github'
 import { formatExactTime, formatRelativeTime } from '../lib/time'
+import {
+  applyImportData,
+  createDefaultImportSelection,
+  detectImportConflicts,
+  parseImportFile,
+  type ConflictStrategy,
+  type ImportPreviewData,
+  type ImportSelection,
+  type ImportValidationError,
+  validateImportData,
+} from '../services/dataImport'
+import { downloadImportTemplate, exportAllXlsx, type TemplateType } from '../services/dataExport'
 import { syncPull, syncPush } from '../services/githubSync'
+import { schedulePush } from '../services/syncDebouncer'
 import { useApplicationStore } from '../store/useApplicationStore'
 import { useAuthStore } from '../store/useAuthStore'
 import { useCalendarStore } from '../store/useCalendarStore'
 import { useCompanyStore } from '../store/useCompanyStore'
 import { useInterviewStore } from '../store/useInterviewStore'
+import { useResumeStore } from '../store/useResumeStore'
 import { useSyncStore } from '../store/useSyncStore'
 
 const SHARE_LINK = 'https://你的用户名.github.io/autumnhunt'
+
+const SHEET_LABELS: Record<keyof ImportSelection, string> = {
+  applications: '投递记录',
+  companies: '公司库',
+  interviews: '面试记录',
+  resumes: '简历清单',
+}
 
 function formatTime(time: string | null) {
   if (!time) return '—'
@@ -24,6 +46,24 @@ function formatTime(time: string | null) {
 export default function Settings() {
   const [showLogs, setShowLogs] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const [excelExporting, setExcelExporting] = useState(false)
+  const [excelImporting, setExcelImporting] = useState(false)
+  const [templateDownloading, setTemplateDownloading] = useState(false)
+
+  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewData, setPreviewData] = useState<ImportPreviewData | null>(null)
+  const [importSelection, setImportSelection] = useState<ImportSelection>(createDefaultImportSelection())
+
+  const [validationOpen, setValidationOpen] = useState(false)
+  const [validationErrors, setValidationErrors] = useState<ImportValidationError[]>([])
+
+  const [conflictOpen, setConflictOpen] = useState(false)
+  const [conflictCount, setConflictCount] = useState(0)
+
+  const [templateOpen, setTemplateOpen] = useState(false)
+
+  const jsonInputRef = useRef<HTMLInputElement | null>(null)
+  const excelInputRef = useRef<HTMLInputElement | null>(null)
 
   const user = useAuthStore((s) => s.user)
   const token = useAuthStore((s) => s.token)
@@ -36,10 +76,12 @@ export default function Settings() {
   const companies = useCompanyStore((s) => s.companies)
   const applications = useApplicationStore((s) => s.applications)
   const interviews = useInterviewStore((s) => s.interviews)
+  const resumes = useResumeStore((s) => s.resumes)
   const events = useCalendarStore((s) => s.events)
   const replaceCompanies = useCompanyStore((s) => s.replaceCompanies)
   const replaceApplications = useApplicationStore((s) => s.replaceApplications)
   const replaceInterviews = useInterviewStore((s) => s.replaceInterviews)
+  const replaceResumes = useResumeStore((s) => s.replaceResumes)
   const replaceEvents = useCalendarStore((s) => s.replaceEvents)
 
   const repoUrl = user ? `https://github.com/${user.login}/${dataRepo}` : '#'
@@ -116,7 +158,72 @@ export default function Settings() {
     replaceApplications(JSON.parse(applicationsJson))
     replaceInterviews(JSON.parse(interviewsJson))
     replaceEvents(JSON.parse(eventsJson))
+    schedulePush()
     toast.success('备份导入成功')
+  }
+
+  const handleImportExcelFile = async (file: File) => {
+    setExcelImporting(true)
+    try {
+      const parsed = await parseImportFile(file)
+      setPreviewData(parsed)
+      setImportSelection(createDefaultImportSelection())
+      setPreviewOpen(true)
+    } catch {
+      toast.error('解析文件失败，请检查文件格式')
+    } finally {
+      setExcelImporting(false)
+    }
+  }
+
+  const executeImport = async (strategy: ConflictStrategy) => {
+    if (!previewData) return
+
+    setExcelImporting(true)
+    try {
+      const result = applyImportData(
+        previewData,
+        { companies, applications, interviews, resumes },
+        importSelection,
+        strategy,
+      )
+
+      replaceCompanies(result.nextCompanies)
+      replaceApplications(result.nextApplications)
+      replaceInterviews(result.nextInterviews)
+      replaceResumes(result.nextResumes)
+      schedulePush()
+
+      toast.success(`成功 ${result.success} 条 / 跳过 ${result.skipped} 条 / 失败 ${result.failed} 条`)
+      setPreviewOpen(false)
+      setConflictOpen(false)
+      setPreviewData(null)
+    } catch {
+      toast.error('导入失败，请稍后重试')
+    } finally {
+      setExcelImporting(false)
+    }
+  }
+
+  const handlePreviewContinue = () => {
+    if (!previewData) return
+
+    const errors = validateImportData(previewData, importSelection)
+    if (errors.length > 0) {
+      setValidationErrors(errors)
+      setValidationOpen(true)
+      return
+    }
+
+    const conflictSummary = detectImportConflicts(previewData, { companies, applications, interviews, resumes }, importSelection)
+
+    if (conflictSummary.total > 0) {
+      setConflictCount(conflictSummary.total)
+      setConflictOpen(true)
+      return
+    }
+
+    void executeImport('skip')
   }
 
   const clearLocalCache = () => {
@@ -134,6 +241,19 @@ export default function Settings() {
     await logout()
     resetSync()
     toast.success('已退出登录')
+  }
+
+  const handleDownloadTemplate = async (type: TemplateType) => {
+    setTemplateDownloading(true)
+    try {
+      await downloadImportTemplate(type)
+      toast.success('模板已下载')
+      setTemplateOpen(false)
+    } catch {
+      toast.error('模板下载失败，请稍后重试')
+    } finally {
+      setTemplateDownloading(false)
+    }
   }
 
   return (
@@ -189,28 +309,58 @@ export default function Settings() {
         <h2 className="text-xl font-semibold">数据管理</h2>
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => void exportBackup()}>导出 JSON 备份</Button>
-          <label className="inline-flex cursor-pointer items-center rounded-2xl border border-primary-cream px-4 py-2 text-sm hover:bg-primary-cream/20">
+          <Button variant="outline" onClick={() => jsonInputRef.current?.click()} disabled={excelImporting}>
             导入 JSON 备份
-            <input
-              type="file"
-              accept=".zip"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0]
-                if (file) void importBackup(file)
-                event.target.value = ''
-              }}
-            />
-          </label>
+          </Button>
           <Button variant="outline" onClick={clearLocalCache}>清空本地缓存</Button>
+          <Button onClick={() => void (async () => {
+            setExcelExporting(true)
+            try {
+              await exportAllXlsx()
+              toast.success('Excel 导出成功')
+            } catch {
+              toast.error('Excel 导出失败')
+            } finally {
+              setExcelExporting(false)
+            }
+          })()} disabled={excelExporting}>
+            {excelExporting ? '处理中...' : '导出 Excel'}
+          </Button>
+          <Button variant="outline" onClick={() => excelInputRef.current?.click()} disabled={excelImporting}>
+            {excelImporting ? '处理中...' : '导入 Excel'}
+          </Button>
+          <Button variant="outline" onClick={() => setTemplateOpen(true)} disabled={templateDownloading}>
+            {templateDownloading ? '处理中...' : '下载导入模板'}
+          </Button>
         </div>
+
+        <input
+          ref={jsonInputRef}
+          type="file"
+          accept=".zip"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            if (file) void importBackup(file)
+            event.target.value = ''
+          }}
+        />
+        <input
+          ref={excelInputRef}
+          type="file"
+          accept=".xlsx,.csv"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0]
+            if (file) void handleImportExcelFile(file)
+            event.target.value = ''
+          }}
+        />
+
         <p className="text-sm text-neutral-muted">
-          数据统计：公司 {companies.length} / 投递 {applications.length} / 面试 {interviews.length} / 日历事件 {events.length}
+          数据统计：公司 {companies.length} / 投递 {applications.length} / 面试 {interviews.length} / 简历 {resumes.length} / 日历事件 {events.length}
         </p>
       </Card>
-
-
-      
 
       <Card className="space-y-3">
         <h2 className="text-xl font-semibold">分享 ⭐</h2>
@@ -239,6 +389,84 @@ export default function Settings() {
           GitHub Issues 反馈
         </a>
       </Card>
+
+      <Dialog open={previewOpen} onOpenChange={setPreviewOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>导入预览</DialogTitle>
+            <DialogDescription>请选择要导入的 Sheet</DialogDescription>
+          </DialogHeader>
+          {previewData && (
+            <div className="space-y-3 text-sm text-neutral-text">
+              {Object.entries(previewData.counts).map(([key, count]) => {
+                const sheetKey = key as keyof ImportSelection
+                return (
+                  <label key={key} className="flex items-center justify-between rounded-lg border border-neutral-border bg-neutral-bg px-3 py-2">
+                    <span>{SHEET_LABELS[sheetKey]} {count} 行</span>
+                    <input
+                      type="checkbox"
+                      checked={importSelection[sheetKey]}
+                      onChange={(event) => {
+                        setImportSelection((prev) => ({ ...prev, [sheetKey]: event.target.checked }))
+                      }}
+                    />
+                  </label>
+                )
+              })}
+            </div>
+          )}
+          <div className="mt-4 flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setPreviewOpen(false)}>取消</Button>
+            <Button onClick={handlePreviewContinue} disabled={excelImporting}>{excelImporting ? '处理中...' : '继续'}</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={validationOpen} onOpenChange={setValidationOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>字段校验失败</DialogTitle>
+            <DialogDescription>请先修复以下问题后再导入</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-neutral-border bg-neutral-bg p-3 text-xs text-neutral-text">
+            {validationErrors.map((item, index) => (
+              <p key={`${item.sheet}-${item.row}-${index}`}>{item.sheet} 第 {item.row} 行：{item.reason}</p>
+            ))}
+          </div>
+          <div className="mt-4 flex justify-end">
+            <Button variant="outline" onClick={() => setValidationOpen(false)}>我知道了</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={conflictOpen} onOpenChange={setConflictOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>发现 {conflictCount} 条重复记录</DialogTitle>
+            <DialogDescription>请选择冲突处理方式</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-2">
+            <Button variant="outline" onClick={() => void executeImport('skip')} disabled={excelImporting}>跳过重复（推荐）</Button>
+            <Button variant="outline" onClick={() => void executeImport('overwrite')} disabled={excelImporting}>覆盖已有</Button>
+            <Button variant="outline" onClick={() => void executeImport('duplicate')} disabled={excelImporting}>全部新增（不去重）</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={templateOpen} onOpenChange={setTemplateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>下载导入模板</DialogTitle>
+            <DialogDescription>请选择一个模板类型</DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-2">
+            <Button variant="outline" onClick={() => void handleDownloadTemplate('applications')} disabled={templateDownloading}>投递记录模板</Button>
+            <Button variant="outline" onClick={() => void handleDownloadTemplate('companies')} disabled={templateDownloading}>公司库模板</Button>
+            <Button variant="outline" onClick={() => void handleDownloadTemplate('interviews')} disabled={templateDownloading}>面试模板</Button>
+            <Button variant="outline" onClick={() => void handleDownloadTemplate('resumes')} disabled={templateDownloading}>简历模板</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
