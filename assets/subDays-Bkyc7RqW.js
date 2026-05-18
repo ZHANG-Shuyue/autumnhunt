@@ -1,0 +1,1 @@
+import{l as e}from"./useAuthStore-DLadu2o9.js";function t(t,n,r){return e(t,-n,r)}export{t};
