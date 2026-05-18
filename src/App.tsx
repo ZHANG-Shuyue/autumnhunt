@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useRef } from 'react'
-import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
+import { Navigate, Route, Routes } from 'react-router-dom'
 import { Toaster, toast } from 'sonner'
 import DeviceFlowDialog from './components/auth/DeviceFlowDialog'
 import WelcomeGate from './components/auth/WelcomeGate'
@@ -21,13 +21,8 @@ const Interviews = lazy(() => import('./pages/Interviews'))
 const Resumes = lazy(() => import('./pages/Resumes'))
 const ResumeDetail = lazy(() => import('./pages/ResumeDetail'))
 const Settings = lazy(() => import('./pages/Settings'))
-const StartGoogle = lazy(() => import('./pages/auth/StartGoogle'))
-const StartMicrosoft = lazy(() => import('./pages/auth/StartMicrosoft'))
-const GoogleCallback = lazy(() => import('./pages/auth/GoogleCallback'))
-const MicrosoftCallback = lazy(() => import('./pages/auth/MicrosoftCallback'))
 
 function App() {
-  const location = useLocation()
   const syncFromOtherStores = useCalendarStore((s) => s.syncFromOtherStores)
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated)
   const user = useAuthStore((s) => s.user)
@@ -89,9 +84,7 @@ function App() {
     }
   }, [token])
 
-  const isAuthRoute = location.pathname.startsWith('/auth/')
-
-  if (!isAuthenticated && !isAuthRoute) {
+  if (!isAuthenticated) {
     return (
       <ErrorBoundary>
         <>
@@ -126,10 +119,10 @@ function App() {
           }
         >
           <Routes>
-            <Route path="/auth/google/start" element={<StartGoogle />} />
-            <Route path="/auth/google/callback" element={<GoogleCallback />} />
-            <Route path="/auth/microsoft/start" element={<StartMicrosoft />} />
-            <Route path="/auth/microsoft/callback" element={<MicrosoftCallback />} />
+            {/* <Route path="/auth/google/start" element={<StartGoogle />} /> */}
+            {/* <Route path="/auth/google/callback" element={<GoogleCallback />} /> */}
+            {/* <Route path="/auth/microsoft/start" element={<StartMicrosoft />} /> */}
+            {/* <Route path="/auth/microsoft/callback" element={<MicrosoftCallback />} /> */}
             <Route element={<Layout />}>
               <Route path="/" element={<Dashboard />} />
               <Route path="/calendar" element={<CalendarPage />} />
@@ -142,7 +135,7 @@ function App() {
               <Route path="/resumes/:id" element={<ResumeDetail />} />
               <Route path="/settings" element={<Settings />} />
             </Route>
-            <Route path="*" element={<Navigate to={isAuthenticated ? '/' : '/'} replace />} />
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </Suspense>
         <DeviceFlowDialog />

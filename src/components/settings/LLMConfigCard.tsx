@@ -19,8 +19,9 @@ interface TestState {
 
 function getStatusText(config?: LLMConfig) {
   if (!config) return '未配置 AI 模型，邮件解析等功能将不可用'
-  const test = config.lastTestAt ? `${formatRelativeTime(config.lastTestAt)} ${config.lastTestOk ? '✓' : '✗'}` : '未测试'
-  return `已配置 · ${config.model} · 上次测试 ${test}`
+  if (!config.lastTestAt) return `已配置 · ${config.model} · 尚未测试`
+  if (config.lastTestOk) return `已配置 · ${config.model} · 上次测试 ${formatRelativeTime(config.lastTestAt)} ✓`
+  return `已配置 · ${config.model} · 上次测试 ${formatRelativeTime(config.lastTestAt)} ✗`
 }
 
 export default function LLMConfigCard() {

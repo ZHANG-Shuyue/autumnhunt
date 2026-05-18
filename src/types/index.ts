@@ -115,17 +115,19 @@ export interface CloudPayload {
   applications: Application[]
   interviews: Interview[]
   resumes: Resume[]
-  mailAccounts?: MailAccount[]
 }
 
 // ===== Mail Accounts =====
-export type MailProvider = 'gmail' | 'outlook'
-export type MailAccountStatus = 'connected' | 'expired' | 'error' | 'syncing'
+export type MailProvider = 'gmail' | 'outlook' | 'qq' | '163' | 'icloud' | 'custom'
+export type MailAccountStatus = 'connected' | 'auth_failed' | 'error' | 'syncing' | 'never_synced'
 
 export interface MailAccount {
   id: string
   provider: MailProvider
   email: string
+  appPassword: string
+  imapHost?: string
+  imapPort?: number
   displayName?: string
   connectedAt: string
   lastSyncAt?: string
