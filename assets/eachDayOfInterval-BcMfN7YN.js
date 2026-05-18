@@ -1,1 +1,0 @@
-import{d as e}from"./useAuthStore-Djh4sTYz.js";import{t}from"./normalizeInterval-Bm2CZLMZ.js";function n(n,r){let{start:i,end:a}=t(r?.in,n),o=+i>+a,s=o?+i:+a,c=o?a:i;c.setHours(0,0,0,0);let l=r?.step??1;if(!l)return[];l<0&&(l=-l,o=!o);let u=[];for(;+c<=s;)u.push(e(i,c)),c.setDate(c.getDate()+l),c.setHours(0,0,0,0);return o?u.reverse():u}export{n as t};
