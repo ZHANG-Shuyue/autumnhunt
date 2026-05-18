@@ -34,7 +34,9 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
                 type="button"
                 className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-lg border border-neutral-border px-4 text-sm text-neutral-text hover:bg-neutral-bg"
                 onClick={() => {
-                  window.location.href = '/'
+                  window.history.pushState({}, '', import.meta.env.BASE_URL)
+                  window.dispatchEvent(new PopStateEvent('popstate'))
+                  this.setState({ hasError: false })
                 }}
               >
                 返回首页
