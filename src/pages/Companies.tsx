@@ -1,4 +1,4 @@
-import { Ellipsis, Plus, Search } from 'lucide-react'
+import { Ellipsis, LayoutGrid, List, Plus, Search } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
@@ -41,12 +41,14 @@ const statusMap: Record<Company['status'], { label: string; variant: 'sage' | 'a
 export default function Companies() {
   const navigate = useNavigate()
   const { companies, addCompany, updateCompany, deleteCompany } = useCompanyStore()
+  const applications = useApplicationStore((s) => s.applications)
   const addApplication = useApplicationStore((s) => s.addApplication)
   const syncFromOtherStores = useCalendarStore((s) => s.syncFromOtherStores)
 
   const [keyword, setKeyword] = useState('')
   const [industry, setIndustry] = useState('all')
   const [showFilters, setShowFilters] = useState(false)
+  const [view, setView] = useState<'card' | 'table'>('card')
   const [status, setStatus] = useState<StatusFilter>('all')
   const [sortBy, setSortBy] = useState<'deadline' | 'createdAt' | 'name'>('deadline')
   const [companyDialogOpen, setCompanyDialogOpen] = useState(false)
@@ -58,7 +60,11 @@ export default function Companies() {
 
   const list = useMemo(() => {
     const filtered = companies
-      .filter((c) => c.name.toLowerCase().includes(keyword.trim().toLowerCase()))
+      .filter((c) => {
+        const k = keyword.trim().toLowerCase()
+        if (!k) return true
+        return c.name.toLowerCase().includes(k) || c.industry.toLowerCase().includes(k)
+      })
       .filter((c) => (industry === 'all' ? true : c.industry === industry))
       .filter((c) => (status === 'all' ? true : c.status === status))
 
@@ -104,6 +110,14 @@ export default function Companies() {
     setTargetCompanyId(null)
   }
 
+  const companyApplyCountMap = useMemo(() => {
+    const map = new Map<string, number>()
+    applications.forEach((item) => {
+      map.set(item.companyId, (map.get(item.companyId) ?? 0) + 1)
+    })
+    return map
+  }, [applications])
+
   return (
     <div className="space-y-4 md:space-y-6">
       <div className="flex flex-col gap-3 md:gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -137,20 +151,68 @@ export default function Companies() {
             <option value="createdAt">按添加时间</option>
             <option value="name">按公司名</option>
           </select>
+          <div className="inline-flex items-center gap-1 rounded-xl border border-neutral-border bg-white p-1">
+            <Button size="sm" variant={view === 'card' ? 'default' : 'ghost'} onClick={() => setView('card')}>
+              <LayoutGrid className="mr-1 h-4 w-4" />卡片
+            </Button>
+            <Button size="sm" variant={view === 'table' ? 'default' : 'ghost'} onClick={() => setView('table')}>
+              <List className="mr-1 h-4 w-4" />表格
+            </Button>
+          </div>
         </div>
         <Button onClick={() => { setEditing(undefined); setCompanyDialogOpen(true) }}><Plus className="mr-2 h-4 w-4" />添加公司</Button>
       </div>
 
       {list.length === 0 ? (
         <EmptyState text="还没有公司哦，点击右上角添加第一家心仪的公司吧 🌱" />
+      ) : view === 'table' ? (
+        <Card className="overflow-x-auto">
+          <table className="w-full min-w-[900px] text-sm">
+            <thead>
+              <tr className="border-b border-neutral-border text-left text-neutral-muted">
+                <th className="py-2">公司名</th>
+                <th>行业</th>
+                <th>状态</th>
+                <th>投递数</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {list.map((company) => {
+                const s = statusMap[company.status]
+                const appliedCount = companyApplyCountMap.get(company.id) ?? 0
+                return (
+                  <tr
+                    key={company.id}
+                    className="cursor-pointer border-b border-neutral-border last:border-0 hover:bg-primary-cream/10"
+                    onClick={() => navigate(`/companies/${company.id}`)}
+                  >
+                    <td className="py-3 font-medium text-neutral-text">{company.name}</td>
+                    <td>{company.industry}</td>
+                    <td>{s.label}</td>
+                    <td>{appliedCount}</td>
+                    <td className="space-x-1">
+                      <Button size="sm" variant="ghost" onClick={(event) => { event.stopPropagation(); setEditing(company); setCompanyDialogOpen(true) }}>
+                        编辑
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={(event) => { event.stopPropagation(); setTargetCompanyId(company.id); setApplicationDialogOpen(true) }}>
+                        + 投递
+                      </Button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
           {list.map((company) => {
             const s = statusMap[company.status]
             return (
               <Card
                 key={company.id}
-                className="space-y-4 cursor-pointer transition-shadow hover:shadow-lg"
+                className="space-y-2.5 cursor-pointer p-3 transition-shadow hover:shadow-lg"
                 role="button"
                 tabIndex={0}
                 onClick={() => navigate(`/companies/${company.id}`)}
@@ -162,7 +224,7 @@ export default function Companies() {
                 }}
               >
                 <div className="flex items-start justify-between">
-                  <div className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary-cream/70 to-primary-mist/60" />
+                  <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary-cream/70 to-primary-mist/60" />
                   {/* v0.2.1: 编辑/删除收纳到 ... 菜单 */}
                   <Popover>
                     <PopoverTrigger asChild>
@@ -200,13 +262,13 @@ export default function Companies() {
                   </Popover>
                 </div>
                 <div>
-                  <h3 className="text-base font-semibold sm:text-lg">{company.name}</h3>
-                  <div className="mt-2 flex gap-2">
+                  <h3 className="line-clamp-1 text-sm font-semibold sm:text-base">{company.name}</h3>
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
                     <Badge variant="sage">{company.industry}</Badge>
                     <Badge variant={s.variant}>{s.label}</Badge>
                   </div>
                 </div>
-                <p className="text-xs text-neutral-muted sm:text-sm">截止日期：{company.deadline ?? '待更新'}</p>
+                <p className="text-xs text-neutral-muted">截止：{company.deadline ?? '待更新'}</p>
                 {(company.recruitingLinks?.length ?? 0) > 0 && (
                   <p className="text-xs text-neutral-muted">🔗 {company.recruitingLinks?.length ?? 0} 个招聘链接</p>
                 )}

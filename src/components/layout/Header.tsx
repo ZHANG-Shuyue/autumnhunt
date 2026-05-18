@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronDown, ExternalLink, FileText, LogIn, LogOut, Menu, Settings, User } from 'lucide-react'
+import { ArrowLeft, ChevronDown, LogIn, LogOut, Menu, User } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import SyncIndicator from './SyncIndicator'
@@ -99,40 +99,11 @@ export default function Header() {
             <div className="absolute right-0 top-full z-50 mt-2 w-56 rounded-lg border border-stone-200 bg-white shadow-lg">
               {user ? (
                 <>
-                  <div className="px-4 py-2 text-sm text-stone-700">{user.login}</div>
+                  <div className="px-4 py-2 text-sm text-stone-700">
+                    <p className="font-medium">{user.login}</p>
+                    <p className="text-xs text-stone-500">{user.email ?? `${user.login}@users.noreply.github.com`}</p>
+                  </div>
                   <div className="border-t border-stone-100" />
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-stone-700 hover:bg-stone-50"
-                    onClick={() => {
-                      navigate('/settings')
-                      setMenuOpen(false)
-                    }}
-                  >
-                    <Settings className="h-4 w-4" />
-                    设置
-                  </button>
-                  <button
-                    type="button"
-                    className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-stone-700 hover:bg-stone-50"
-                    onClick={() => {
-                      navigate('/resumes')
-                      setMenuOpen(false)
-                    }}
-                  >
-                    <FileText className="h-4 w-4" />
-                    简历库
-                  </button>
-                  <a
-                    href={`https://github.com/${user.login}/autumnhunt-data`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="flex items-center gap-2 px-4 py-2 text-sm text-stone-700 hover:bg-stone-50"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    GitHub 仓库
-                  </a>
                   <button
                     type="button"
                     className="flex w-full items-center gap-2 px-4 py-2 text-left text-sm text-stone-700 hover:bg-stone-50"

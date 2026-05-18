@@ -12,13 +12,11 @@ import {
 } from '@dnd-kit/core'
 import { SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { Calendar, Ellipsis, Filter, Kanban, List, X } from 'lucide-react'
+import { Ellipsis, Filter, Kanban, List, X } from 'lucide-react'
 import { memo, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import EventCard from '../components/calendar/EventCard'
 import ConfirmDialog from '../components/common/ConfirmDialog'
-import EmptyState from '../components/common/EmptyState'
 import ApplicationForm from '../components/forms/ApplicationForm'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -243,12 +241,12 @@ export default function Applications() {
   const interviews = useInterviewStore((s) => s.interviews)
   const resumes = useResumeStore((s) => s.resumes)
   const { applications, addApplication, updateApplication, deleteApplication } = useApplicationStore()
-  const { syncFromOtherStores, events } = useCalendarStore()
+  const { syncFromOtherStores } = useCalendarStore()
   const applicationsFilter = useUiStore((s) => s.applicationsFilter)
   const setApplicationsFilter = useUiStore((s) => s.setApplicationsFilter)
   const resetApplicationsFilter = useUiStore((s) => s.resetApplicationsFilter)
 
-  const [view, setView] = useState<'kanban' | 'table' | 'calendar'>('kanban')
+  const [view, setView] = useState<'kanban' | 'table'>('kanban')
   const [tableSort, setTableSort] = useState<TableSortKey>('appliedAtDesc')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Application | undefined>()
@@ -257,8 +255,6 @@ export default function Applications() {
   const [activeColumnIndex, setActiveColumnIndex] = useState(0)
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false)
   const columnsScrollRef = useRef<HTMLDivElement | null>(null)
-
-  const appEvents = useMemo(() => events.filter((e) => ['投递', '笔试'].includes(e.type)), [events])
 
   const submit = (values: ApplicationFormValues) => {
     const parsed = applicationSchema.parse(values)
@@ -466,11 +462,11 @@ export default function Applications() {
 
   const filterPanel = (
     <div className="space-y-3 rounded-xl border border-neutral-border bg-neutral-bg p-3">
-      <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+      <div className="flex flex-wrap items-center gap-2">
         <select
           value={applicationsFilter.companyId ?? ''}
           onChange={(event) => setApplicationsFilter({ companyId: event.target.value || null })}
-          className="h-10 rounded-xl border border-neutral-border bg-white px-3 text-sm"
+          className="h-10 min-w-[170px] rounded-xl border border-neutral-border bg-white px-3 text-sm"
         >
           <option value="">全部公司</option>
           {companies.map((company) => (
@@ -483,7 +479,7 @@ export default function Applications() {
         <select
           value={applicationsFilter.resumeId ?? ''}
           onChange={(event) => setApplicationsFilter({ resumeId: event.target.value || null })}
-          className="h-10 rounded-xl border border-neutral-border bg-white px-3 text-sm"
+          className="h-10 min-w-[170px] rounded-xl border border-neutral-border bg-white px-3 text-sm"
         >
           <option value="">全部简历版本</option>
           {resumes.map((resume) => (
@@ -496,9 +492,14 @@ export default function Applications() {
         <input
           value={applicationsFilter.keyword}
           onChange={(event) => setApplicationsFilter({ keyword: event.target.value })}
-          className="h-10 rounded-xl border border-neutral-border bg-white px-3 text-sm md:col-span-2"
+          className="h-10 min-w-[220px] flex-1 rounded-xl border border-neutral-border bg-white px-3 text-sm"
           placeholder="搜索职位 / 公司 / 备注"
         />
+        {activeFiltersCount > 0 && (
+          <Button size="sm" variant="ghost" onClick={resetApplicationsFilter}>
+            清空筛选
+          </Button>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
@@ -536,11 +537,6 @@ export default function Applications() {
             <option value="companyName">按公司名</option>
             <option value="status">按状态</option>
           </select>
-          {activeFiltersCount > 0 && (
-            <Button size="sm" variant="ghost" onClick={resetApplicationsFilter}>
-              清空筛选
-            </Button>
-          )}
         </div>
       </div>
     </div>
@@ -552,7 +548,6 @@ export default function Applications() {
         <div className="inline-flex gap-2">
           <Button size="sm" variant={view === 'kanban' ? 'default' : 'outline'} onClick={() => setView('kanban')}><Kanban className="mr-1 h-4 w-4" />看板</Button>
           <Button size="sm" variant={view === 'table' ? 'default' : 'outline'} onClick={() => setView('table')}><List className="mr-1 h-4 w-4" />表格</Button>
-          <Button size="sm" variant={view === 'calendar' ? 'default' : 'outline'} onClick={() => setView('calendar')}><Calendar className="mr-1 h-4 w-4" />日历</Button>
         </div>
         <Button onClick={() => { setEditing(undefined); setDialogOpen(true) }}>新建投递</Button>
       </div>
@@ -648,12 +643,6 @@ export default function Applications() {
               </tbody>
             </table>
           </Card>
-        </div>
-      )}
-
-      {view === 'calendar' && (
-        <div className="space-y-2">
-          {appEvents.length ? appEvents.map((event) => <EventCard key={event.id} event={event} />) : <EmptyState text="暂无投递相关日历事件" />}
         </div>
       )}
 
