@@ -115,4 +115,33 @@ export interface CloudPayload {
   applications: Application[]
   interviews: Interview[]
   resumes: Resume[]
+  mailAccounts?: MailAccount[]
+}
+
+// ===== Mail Accounts =====
+export type MailProvider = 'gmail' | 'outlook'
+export type MailAccountStatus = 'connected' | 'expired' | 'error' | 'syncing'
+
+export interface MailAccount {
+  id: string
+  provider: MailProvider
+  email: string
+  displayName?: string
+  connectedAt: string
+  lastSyncAt?: string
+  lastSyncCount?: number
+  status: MailAccountStatus
+  errorMessage?: string
+}
+
+// ===== LLM Config（BYO Key，统一 OpenAI 兼容协议） =====
+export interface LLMConfig {
+  baseUrl: string
+  apiKey: string
+  model: string
+  presetId?: string
+  savedAt: string
+  lastTestAt?: string
+  lastTestOk?: boolean
+  lastTestError?: string
 }

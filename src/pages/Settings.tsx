@@ -2,6 +2,8 @@ import JSZip from 'jszip'
 import { QRCodeSVG } from 'qrcode.react'
 import { useRef, useState } from 'react'
 import { toast } from 'sonner'
+import LLMConfigCard from '../components/settings/LLMConfigCard'
+import MailAccountsCard from '../components/settings/MailAccountsCard'
 import { Button } from '../components/ui/button'
 import { Card } from '../components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../components/ui/dialog'
@@ -304,6 +306,9 @@ export default function Settings() {
           </div>
         )}
       </Card>
+
+      <LLMConfigCard />
+      <MailAccountsCard />
 
       <Card className="space-y-3">
         <h2 className="text-xl font-semibold">数据管理</h2>

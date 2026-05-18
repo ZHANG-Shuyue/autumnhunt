@@ -1,9 +1,10 @@
 import { Octokit } from '@octokit/rest'
-import type { Application, CloudPayload, Company, Interview, Resume } from '../types'
+import type { Application, CloudPayload, Company, Interview, MailAccount, Resume } from '../types'
 import { useApplicationStore } from '../store/useApplicationStore'
 import { useAuthStore } from '../store/useAuthStore'
 import { useCompanyStore } from '../store/useCompanyStore'
 import { useInterviewStore } from '../store/useInterviewStore'
+import { useMailAccountStore } from '../store/useMailAccountStore'
 import { useResumeStore } from '../store/useResumeStore'
 import { useSyncStore } from '../store/useSyncStore'
 
@@ -83,7 +84,13 @@ function buildCommitMessage() {
   return `chore: sync from ${getDeviceName()} at ${new Date().toISOString()}`
 }
 
-function buildPayload(companies: Company[], applications: Application[], interviews: Interview[], resumes: Resume[]): CloudPayload {
+function buildPayload(
+  companies: Company[],
+  applications: Application[],
+  interviews: Interview[],
+  resumes: Resume[],
+  mailAccounts: MailAccount[],
+): CloudPayload {
   return {
     version: 1,
     updatedAt: new Date().toISOString(),
@@ -92,6 +99,7 @@ function buildPayload(companies: Company[], applications: Application[], intervi
     applications,
     interviews,
     resumes,
+    mailAccounts,
   }
 }
 
@@ -101,6 +109,7 @@ export function buildLocalPayload(): CloudPayload {
     useApplicationStore.getState().applications,
     useInterviewStore.getState().interviews,
     useResumeStore.getState().resumes,
+    useMailAccountStore.getState().accounts,
   )
 }
 
@@ -156,6 +165,7 @@ export async function pullData(token: string): Promise<{ data: CloudPayload | nu
         applications: parsed.applications ?? [],
         interviews: parsed.interviews ?? [],
         resumes: parsed.resumes ?? [],
+        mailAccounts: parsed.mailAccounts ?? [],
       },
       sha: content.sha,
     }
@@ -276,6 +286,7 @@ export async function syncPull(): Promise<void> {
     useApplicationStore.getState().replaceApplications(data.applications)
     useInterviewStore.getState().replaceInterviews(data.interviews)
     useResumeStore.getState().replaceResumes(data.resumes ?? [])
+    useMailAccountStore.getState().hydrate(data.mailAccounts ?? [])
 
     syncStore.setLastSync(sha, new Date().toISOString())
     syncStore.setStatus('synced')
