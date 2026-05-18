@@ -1,0 +1,1 @@
+var e=`autumnhunt-activity-log`;function t(t){let r=n(),i=[{id:crypto.randomUUID(),message:t,createdAt:new Date().toISOString()},...r].slice(0,50);localStorage.setItem(e,JSON.stringify(i))}function n(){try{let t=localStorage.getItem(e);return t?JSON.parse(t):[]}catch{return[]}}export{n,t};

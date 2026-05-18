@@ -1,0 +1,1 @@
+import{h as e,m as t}from"./index-8JKHSSgl.js";function n(n,r,i){let[a,o]=e(i?.in,n,r);return+t(a)==+t(o)}function r(t,n){let[r,i]=e(t,n.start,n.end);return{start:r,end:i}}export{n,r as t};

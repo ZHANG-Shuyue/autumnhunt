@@ -1,0 +1,1 @@
+import{l as e}from"./useAuthStore-Djh4sTYz.js";function t(t,n,r){return e(t,-n,r)}export{t};
